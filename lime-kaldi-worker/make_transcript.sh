@@ -1,12 +1,15 @@
 # docker run --memory=10G --memory-swap=12G lime-kaldi
+function done_file_exists {
+  aws --endpoint-url 'http://s3-bos.wgbh.org' s3api head-object --bucket $LIMEKALDI_OUTPUT_BUCKET --key lime-kaldi-successes/$LIMEKALDI_UID.txt &> /dev/null
+}
 
 # write the video file to /root
-local_input_filepath=/root/$(basename -- "$INPUT_KEY")
-aws s3api get-object --bucket $INPUT_BUCKET --key $INPUT_KEY $local_input_filepath
+local_input_filepath=/root/$(basename -- "$LIMEKALDI_INPUT_KEY")
+aws s3api get-object --bucket $LIMEKALDI_INPUT_BUCKET --key $LIMEKALDI_INPUT_KEY $local_input_filepath
 
 echo "When I need a snack..."
 # get filename without mp4 extension
-base=$(basename -- "$INPUT_FILENAME" .mp4 .mp3)
+base=$(basename -- "$LIMEKALDI_INPUT_KEY" .mp4 .mp3)
 echo $base
 outputwavpath=/root/audio_in_16khz/"$base"_16kHz.wav
 echo $outputwavpath
@@ -15,7 +18,7 @@ echo $outputjsonpath
 
 # use ffmpeg to get 16khz fiel
 echo "Creating 16Khz wav of input file..."
-ffmpeg -i $INPUT_FILENAME -ac 1 -ar 16000 "$outputwavpath";
+ffmpeg -i $LIMEKALDI_INPUT_KEY -ac 1 -ar 16000 "$outputwavpath";
 
 echo "I reach for audio files..."
 #run that kaldi, baby!
@@ -33,6 +36,6 @@ echo "$word_json" | jq --arg file_id "$(basename "$outputjsonpath" | sed -e 's#\
 
 # upload file to object store
 echo "Uploading $finished_output_path to object S3..."
-aws s3api put-object --bucket $OUTPUT_BUCKET --key "transcripts/$(basename -- "$finished_output_path")" --body $finished_output_path
+aws --endpoint-url 'http://s3-bos.wgbh.org' s3api put-object --bucket $LIMEKALDI_OUTPUT_BUCKET --key "transcripts/$(basename -- "$finished_output_path")" --body $finished_output_path
 
 echo "Im done!"

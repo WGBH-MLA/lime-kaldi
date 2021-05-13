@@ -111,7 +111,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: lime-kaldi-worker-#{uid}
-  namespace: dr-transcode
+  namespace: lime-kaldi
   labels:
     app: lime-kaldi-worker
 spec:
@@ -162,7 +162,7 @@ spec:
   end
 
   puts "I sure would like to start #{uid} for #{input_filename}!"
-  puts `kubectl --kubeconfig /mnt/kubectl-secret --namespace=dr-transcode apply -f /root/pod.yml`
+  puts `kubectl --kubeconfig /mnt/kubectl-secret --namespace=limei-kaldi apply -f /root/pod.yml`
   set_job_status(uid, JobStatus::Working)
 end
 
@@ -171,9 +171,6 @@ jobs = @client.query("SELECT * FROM jobs WHERE status=#{JobStatus::New} LIMIT 48
 puts "Found #{jobs.count} jobs with JS::New"
 jobs.each do |job|
 
-  # this works, but sometimes gets 'TLS handshake error', yielding '0 pods running'
-  # number_ffmpeg_pods = `kubectl --kubeconfig=/mnt/kubectl-secret --namespace=dr-transcode get pods | grep '^dr-ffmpeg' | wc -l`
-  # this badboy protects against that
   num_lime_workers = `/root/app/check_number_pods.sh`
 
   if num_lime_workers.to_i == -1
@@ -213,7 +210,7 @@ jobs.each do |job|
   if job_finished
     # head-object returns "" in this context when 404, otherwise gives a zesty pan-fried json message as a String
     puts "Job Succeeded - Attempting to delete pod #{pod_name}"
-    puts `kubectl --kubeconfig=/mnt/kubectl-secret --namespace=dr-transcode delete pod #{pod_name}`  
+    puts `kubectl --kubeconfig=/mnt/kubectl-secret --namespace=lime-kaldi delete pod #{pod_name}`  
     set_job_status(job["uid"], JobStatus::CompletedWork)
   else
 
@@ -227,7 +224,7 @@ jobs.each do |job|
     # # error file was found
     # if !resp.empty?
     #   puts "Error detected on #{job["uid"]}, Going to kill container :("
-    #   puts `kubectl --kubeconfig=/mnt/kubectl-secret --namespace=dr-transcode delete pod #{pod_name}`  
+    #   puts `kubectl --kubeconfig=/mnt/kubectl-secret --namespace=lime-kaldi delete pod #{pod_name}`  
     #   set_job_status(job["uid"], JobStatus::Failed, "Error file was found, failing")
     # else 
     #   puts "Job #{job["uid"]} isnt done, keeeeeeeep going!"

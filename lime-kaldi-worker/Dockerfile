@@ -4,16 +4,15 @@ WORKDIR /root
 
 # for testing - these come in through config map in rancher
 # COPY simpsons.mp4 simpsons.mp4
-# ENV INPUT_BUCKET="s3bucketofsimpsons.mp4"
-# ENV INPUT_KEY="/root/simpsons.mp4"
-# ENV INPUT_FILENAME="/root/simpsons.mp4"
-# COPY american-archive-kaldi /opt/kaldi/egs/american-archive-kaldi
+# ENV LIMEKALDI_UID="bloppitybloppityboo"
+# ENV LIMEKALDI_INPUT_BUCKET="limekaldi-input-bucket"
+# ENV LIMEKALDI_INPUT_KEY="location/of/limekaldi/inputfile.mp4"
+# ENV LIMEKALDI_OUTPUT_BUCKET="limekaldi-output-bucket"
 
 COPY make_transcript.sh /root/make_transcript.sh
 RUN chmod 755 make_transcript.sh
 
 RUN mkdir /root/audio_in_16khz
-# WORKDIR /opt/kaldi/egs/american-archive-kaldi
 
 # just for json2txt
 RUN apt-get update && apt-get install -y python-pip

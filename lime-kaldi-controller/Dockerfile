@@ -11,10 +11,8 @@ COPY awscli-exe-linux-x86_64.zip /root/awscli-exe-linux-x86_64.zip
 RUN unzip awscli-exe-linux-x86_64.zip && aws/install
 
 WORKDIR /root
-COPY queue-cron /root/queue-cron
-RUN chmod 0644 /root/queue-cron
-RUN crontab /root/queue-cron
-RUN touch /var/log/queue-cron.log
+COPY queue-control-cron /var/spool/cron/crontabs/root
+RUN touch /var/log/queue-control.log
 
 ADD app/ app/
 WORKDIR /root/app/
@@ -25,4 +23,4 @@ RUN bundle install
 # bundler recommends using these if you havin trubb
 # ENV GEM_HOME="/usr/local/bundle"
 # ENV PATH $GEM_HOME/bin:$GEM_HOME/gems/bin:$PATH
-CMD /usr/sbin/cron -f && tail -f /var/log/queue-cron.log
+CMD service cron start && tail -f /var/log/queue-control.log

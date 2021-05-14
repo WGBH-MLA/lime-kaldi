@@ -8,7 +8,7 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s 
 
 # get aws-cli
 COPY awscli-exe-linux-x86_64.zip /root/awscli-exe-linux-x86_64.zip
-RUN unzip awscli-exe-linux-x86_64.zip && aws/install
+RUN unzip /root/awscli-exe-linux-x86_64.zip && /root/aws/install
 
 WORKDIR /root
 COPY queue-control-cron /var/spool/cron/crontabs/root

@@ -24,7 +24,12 @@ RUN apt-get install -y libperl4-corelibs-perl libjson-perl libfile-slurp-tiny-pe
 
 # download and unzip the american-archive-kaldi recipe from pua
 WORKDIR /opt/kaldi/egs
-RUN curl -o american-archive-kaldi.zip https://lime-kaldi-model.s3.amazonaws.com/american-archive-kaldi.zip && unzip ./american-archive-kaldi.zip
+# RUN curl -o american-archive-kaldi.zip https://lime-kaldi-model.s3.amazonaws.com/american-archive-kaldi.zip && unzip ./american-archive-kaldi.zip
+
+# add in big ol model files
+ADD https://lime-kaldi-model.s3.amazonaws.com/american-archive-kaldi.zip american-archive-kaldi.zip
+# decompress them and then clear the zip
+RUN unzip ./american-archive-kaldi.zip && rm american-archive-kaldi.zip
 RUN chmod +x -R /opt/kaldi/egs/american-archive-kaldi 
 RUN ln -sf /opt/kaldi/ /kaldi
 

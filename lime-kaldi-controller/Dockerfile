@@ -1,4 +1,4 @@
-FROM ruby:2.7
+FROM ruby:2.7.3
 
 # get curl cron vim
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --force-yes  -y1 curl cron vim
@@ -7,10 +7,10 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --force-yes
 RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl && chmod +x ./kubectl && mv ./kubectl /usr/local/bin/kubectl
 
 # get aws-cli
-COPY awscli-exe-linux-x86_64.zip /root/awscli-exe-linux-x86_64.zip
-RUN unzip /root/awscli-exe-linux-x86_64.zip && /root/aws/install
-
 WORKDIR /root
+COPY awscli-exe-linux-x86_64.zip /root/awscli-exe-linux-x86_64.zip
+RUN unzip /root/awscli-exe-linux-x86_64.zip && aws/install
+
 COPY queue-control-cron /var/spool/cron/crontabs/root
 RUN touch /var/log/queue-control.log
 

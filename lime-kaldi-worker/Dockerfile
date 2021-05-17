@@ -29,7 +29,13 @@ WORKDIR /opt/kaldi/egs
 # add in big ol model files
 ADD https://lime-kaldi-model.s3.amazonaws.com/american-archive-kaldi.zip american-archive-kaldi.zip
 # decompress them and then clear the zip
-RUN unzip ./american-archive-kaldi.zip && rm american-archive-kaldi.zip && ln -sf /opt/kaldi/ /kaldi
+RUN unzip ./american-archive-kaldi.zip && rm american-archive-kaldi.zip
+COPY path.sh /opt/kaldi/egs/american-archive-kaldi/sample_experiment/path.sh
+COPY set-kaldi-path.sh /opt/kaldi/egs/american-archive-kaldi/sample_experiment/set-kaldi-path.sh
+# maybe not necessary
+RUN chmod +x /opt/kaldi/egs/american-archive-kaldi/sample_experiment/path.sh /opt/kaldi/egs/american-archive-kaldi/sample_experiment/set-kaldi-path.sh
+
+# RUN ln -sf /opt/kaldi/ /kaldi
 
 WORKDIR /root
 

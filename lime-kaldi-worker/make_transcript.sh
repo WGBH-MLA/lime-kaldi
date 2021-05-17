@@ -9,11 +9,12 @@ aws s3api get-object --bucket $LIMEKALDI_INPUT_BUCKET --key $LIMEKALDI_INPUT_KEY
 
 echo "When I need a snack..."
 # get filename without mp4 extension
-base=$(basename -- "$LIMEKALDI_INPUT_KEY" .mp4 .mp3)
+base=$(basename -- "$LIMEKALDI_INPUT_KEY")
+filename_no_ext=$(echo "$base" | cut -f 1 -d '.' )
 echo $base
-outputwavpath=/root/audio_in_16khz/"$base"_16kHz.wav
+outputwavpath=/root/audio_in_16khz/"$filename_no_ext"_16kHz.wav
 echo $outputwavpath
-outputjsonpath="/root/$base".json
+outputjsonpath="/root/$filename_no_ext".json
 echo $outputjsonpath
 
 # use ffmpeg to get 16khz fiel

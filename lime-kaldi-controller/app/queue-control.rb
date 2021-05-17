@@ -134,7 +134,7 @@ spec:
         secretName: obstoresecrets
   containers:
     - name: lime-kaldi-worker
-      image: mla-dockerhub.wgbh.org/lime-kaldi-worker:7
+      image: mla-dockerhub.wgbh.org/lime-kaldi-worker:8
       resources:
         limits:
           memory: "10000Mi"

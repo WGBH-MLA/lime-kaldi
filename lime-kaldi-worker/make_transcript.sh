@@ -1,4 +1,8 @@
+#!/bin/bash
+
+# not to scale
 # docker run --memory=10G --memory-swap=12G lime-kaldi
+
 function done_file_exists {
   aws --endpoint-url 'http://s3-bos.wgbh.org' s3api head-object --bucket $LIMEKALDI_OUTPUT_BUCKET --key lime-kaldi-successes/$LIMEKALDI_UID.txt &> /dev/null
 }

@@ -1,3 +1,4 @@
+#!/bin/bash
 # grab output of 'how many pods'
 OUTPUT=$(kubectl --kubeconfig=/mnt/kubectl-secret --namespace=lime-kaldi get pods)
 # check whether the command ended

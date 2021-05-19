@@ -151,7 +151,7 @@ spec:
       - name: LIMEKALDI_INPUT_KEY
         value: #{ input_filepath }
       - name: LIMEKALDI_OUTPUT_BUCKET
-        value: streaming-proxies
+        value: lime-kaldi-output
   imagePullSecrets:
       - name: mla-dockerhub
   }
@@ -162,7 +162,7 @@ spec:
   end
 
   puts "I sure would like to start #{uid} for #{input_filename}!"
-  puts `kubectl --kubeconfig /mnt/kubectl-secret --namespace=limei-kaldi apply -f /root/pod.yml`
+  puts `kubectl --kubeconfig /mnt/kubectl-secret --namespace=lime-kaldi apply -f /root/pod.yml`
   set_job_status(uid, JobStatus::Working)
 end
 

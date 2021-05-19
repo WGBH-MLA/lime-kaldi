@@ -23,7 +23,7 @@ echo $outputjsonpath
 
 # use ffmpeg to get 16khz fiel
 echo "Creating 16Khz wav of input file..."
-ffmpeg -i $LIMEKALDI_INPUT_KEY -ac 1 -ar 16000 "$outputwavpath";
+ffmpeg -i $local_input_filepath -ac 1 -ar 16000 "$outputwavpath";
 
 echo "I reach for audio files..."
 #run that kaldi, baby!

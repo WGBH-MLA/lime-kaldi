@@ -19,7 +19,7 @@ module JobType
 end
 
 # load db..
-@client = Mysql2::Client.new(host: "mysql", username: "root", database: "limekaldi", password: "", port: 3306)
+@client = Mysql2::Client.new(host: "lime-kaldi-mysql", username: "root", database: "limekaldi", password: "", port: 3306)
 
 def get_output_key(input_bucketname, input_key)
   fp = Pathname.new(input_bucketname + '/' + input_key)

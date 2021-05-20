@@ -65,7 +65,7 @@ end
 def validate_for_jobstart(uid, job_type, input_bucketname,  input_filepath)
   # check that input file exists
   unless check_file_exists(input_bucketname, input_filepath)
-    set_job_status(uid, JobStatus::Failed, "Input file at bucket: #{input_bucketname} key: #{input_filepath} was not found on Object Store...")
+    set_job_status(uid, JobStatus::Fail, "Input file at bucket: #{input_bucketname} key: #{input_filepath} was not found on Object Store...")
     return false
   end
   # check that file not too big
@@ -135,6 +135,7 @@ spec:
   containers:
     - name: lime-kaldi-worker
       image: foggbh/lime-kaldi-worker-dev:newest
+      imagePullPolicy: Always
       resources:
         limits:
           memory: "10000Mi"
@@ -200,7 +201,7 @@ jobs.each do |job|
   if job["job_type"] == JobType::CreateTranscript
     donefilepath = get_donefile_filepath(job["uid"])
     puts "CreateTranscript CHECK:: Now searching for Done file #{donefilepath}"
-    resp = `aws --endpoint-url 'http://s3-bos.wgbh.org' s3api head-object --bucket streaming-proxies --key #{donefilepath}`
+    resp = `aws --endpoint-url 'http://s3-bos.wgbh.org' s3api head-object --bucket lime-kaldi-output --key #{donefilepath}`
     # if done file is present, work completed successfully
     job_finished = !resp.empty?
     puts "Done File #{job["uid"]} was found on object store" if job_finished
@@ -215,7 +216,7 @@ jobs.each do |job|
     # head-object returns "" in this context when 404, otherwise gives a zesty pan-fried json message as a String
     puts "Job Succeeded - Attempting to delete pod #{pod_name}"
     puts `kubectl --kubeconfig=/mnt/kubectl-secret --namespace=lime-kaldi delete pod #{pod_name}`  
-    set_job_status(job["uid"], JobStatus::CompletedWork)
+    set_job_status(job["uid"], JobStatus::Done)
   else
 
     # TODO: add this back into worker

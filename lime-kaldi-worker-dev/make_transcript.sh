@@ -7,6 +7,13 @@ function done_file_exists {
   aws --endpoint-url 'http://s3-bos.wgbh.org' s3api head-object --bucket $LIMEKALDI_OUTPUT_BUCKET --key lime-kaldi-successes/$LIMEKALDI_UID.txt &> /dev/null
 }
 
+# Check if this job is actually already done (we just rebooted)
+if done_file_exists;
+  then
+    echo "Done file already exists, I've no purpose in this world... Goodbye!"
+    exit 0
+fi
+
 # write the video file to /root
 local_input_filepath=/root/$(basename -- "$LIMEKALDI_INPUT_KEY")
 aws s3api --endpoint-url 'http://s3-bos.wgbh.org' get-object --bucket $LIMEKALDI_INPUT_BUCKET --key $LIMEKALDI_INPUT_KEY $local_input_filepath

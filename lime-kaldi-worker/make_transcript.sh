@@ -43,4 +43,8 @@ echo "$word_json" | jq --arg file_id "$(basename "$outputjsonpath" | sed -e 's#\
 echo "Uploading $finished_output_path to object S3..."
 aws --endpoint-url 'http://s3-bos.wgbh.org' s3api put-object --bucket $LIMEKALDI_OUTPUT_BUCKET --key "transcripts/$(basename -- "$finished_output_path")" --body $finished_output_path
 
+echo "Great Job! $LIMEKALDI_INPUT_KEY" > ./donefile
+aws --endpoint-url 'http://s3-bos.wgbh.org' s3api put-object --bucket $LIMEKALDI_OUTPUT_BUCKET --key lime-kaldi-successes/$DRTRANSCODE_UID.txt --body ./donefile
+echo "Uploaded done file..."
+
 echo "Im done!"

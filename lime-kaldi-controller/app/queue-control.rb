@@ -34,7 +34,7 @@ end
 
 def get_donefile_filepath(uid)
   # this is a folder of empty files, marking the success of an audiosplit job
-  %(lime-kaldi-successes/success-#{uid}.txt)
+  %(lime-kaldi-successes/#{uid}.txt)
 end
 
 def get_pod_name(uid, job_type)

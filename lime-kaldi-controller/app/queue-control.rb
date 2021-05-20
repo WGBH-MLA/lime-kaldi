@@ -157,6 +157,10 @@ spec:
   }
   end
 
+  # if you need to ensure that newest is coming through from docker hub
+  # imagePullPolicy: Always
+
+
   File.open('/root/pod.yml', 'w+') do |f|
     f << pod_yml_content
   end

@@ -134,8 +134,7 @@ spec:
         secretName: obstoresecrets
   containers:
     - name: lime-kaldi-worker
-      image: foggbh/lime-kaldi-worker-dev:newest
-      imagePullPolicy: Always
+      image: foggbh/lime-kaldi-worker:latest
       resources:
         limits:
           memory: "10000Mi"

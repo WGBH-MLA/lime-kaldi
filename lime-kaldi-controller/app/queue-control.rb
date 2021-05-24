@@ -135,6 +135,7 @@ spec:
   containers:
     - name: lime-kaldi-worker
       image: foggbh/lime-kaldi-worker:latest
+      imagePullPolicy: Always
       resources:
         limits:
           memory: "10000Mi"

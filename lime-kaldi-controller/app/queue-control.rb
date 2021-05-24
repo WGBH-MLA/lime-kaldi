@@ -135,10 +135,9 @@ spec:
   containers:
     - name: lime-kaldi-worker
       image: foggbh/lime-kaldi-worker:latest
-      imagePullPolicy: Always
       resources:
         limits:
-          memory: "10000Mi"
+          memory: "8000Mi"
           cpu: "5000m"      
       volumeMounts:
       - mountPath: /root/.aws
@@ -160,7 +159,6 @@ spec:
 
   # if you need to ensure that newest is coming through from docker hub
   # imagePullPolicy: Always
-
 
   File.open('/root/pod.yml', 'w+') do |f|
     f << pod_yml_content
@@ -184,7 +182,7 @@ jobs.each do |job|
   end
 
   puts "There are #{num_lime_workers} running right now..."
-  if num_lime_workers.to_i < 1
+  if num_lime_workers.to_i < 2
 
     puts "Ooh yeah - I'm starting #{job["uid"]}!"
     begin_job(job["uid"])

@@ -10,7 +10,7 @@ require 'securerandom'
 
 File.readlines("transcript-guids.txt").each do |guid|
   uid = SecureRandom.uuid
-  query = %(INSERT INTO jobs (uid, status, input_filepath) VALUES("#{uid}", #{JobStatus::New}, "#{guid}"))
+  query = %(INSERT INTO jobs (uid, status, input_filepath, input_bucketname) VALUES("#{uid}", #{JobStatus::New}, "#{guid}", "lime-kaldi-input"))
   puts query
   resp = @client.query(query)
   puts resp

@@ -138,7 +138,7 @@ spec:
       resources:
         limits:
           memory: "8000Mi"
-          cpu: "5000m"      
+          cpu: "10000m"      
       volumeMounts:
       - mountPath: /root/.aws
         name: obstoresecrets

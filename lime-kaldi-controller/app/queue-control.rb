@@ -74,7 +74,7 @@ def validate_for_jobstart(uid, job_type, input_bucketname,  input_filepath)
 end
 
 def get_file_info(bucket, key)
- `aws --endpoint-url 'http://s3-bos.wgbh.org' s3api head-object --bucket #{bucket} --key #{key}`
+ `aws s3api head-object --bucket #{bucket} --key #{key}`
 end
 
 def check_file_exists(bucket, file)
@@ -200,7 +200,7 @@ jobs.each do |job|
   if job["job_type"] == JobType::CreateTranscript
     donefilepath = get_donefile_filepath(job["uid"])
     puts "CreateTranscript CHECK:: Now searching for Done file #{donefilepath}"
-    resp = `aws --endpoint-url 'http://s3-bos.wgbh.org' s3api head-object --bucket lime-kaldi-output --key #{donefilepath}`
+    resp = `aws s3api head-object --bucket lime-kaldi-output --key #{donefilepath}`
     # if done file is present, work completed successfully
     job_finished = !resp.empty?
     puts "Done File #{job["uid"]} was found on object store" if job_finished

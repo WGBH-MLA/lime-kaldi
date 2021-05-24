@@ -4,7 +4,7 @@
 # docker run --memory=10G --memory-swap=12G lime-kaldi
 
 function done_file_exists {
-  aws --endpoint-url 'http://s3-bos.wgbh.org' s3api head-object --bucket $LIMEKALDI_OUTPUT_BUCKET --key lime-kaldi-successes/$LIMEKALDI_UID.txt &> /dev/null
+  aws s3api head-object --bucket $LIMEKALDI_OUTPUT_BUCKET --key lime-kaldi-successes/$LIMEKALDI_UID.txt &> /dev/null
 }
 
 # Check if this job is actually already done (we just rebooted)
@@ -16,7 +16,7 @@ fi
 
 # write the video file to /root
 local_input_filepath=/root/$(basename -- "$LIMEKALDI_INPUT_KEY")
-aws s3api --endpoint-url 'http://s3-bos.wgbh.org' get-object --bucket $LIMEKALDI_INPUT_BUCKET --key $LIMEKALDI_INPUT_KEY $local_input_filepath
+aws s3api get-object --bucket $LIMEKALDI_INPUT_BUCKET --key $LIMEKALDI_INPUT_KEY $local_input_filepath
 
 echo "When I need a snack..."
 # get filename without mp4 extension
@@ -48,10 +48,10 @@ echo "$word_json" | jq --arg file_id "$(basename "$outputjsonpath" | sed -e 's#\
 
 # upload file to object store
 echo "Uploading $finished_output_path to object S3..."
-aws --endpoint-url 'http://s3-bos.wgbh.org' s3api put-object --bucket $LIMEKALDI_OUTPUT_BUCKET --key "transcripts/$(basename -- "$finished_output_path")" --body $finished_output_path
+aws s3api put-object --bucket $LIMEKALDI_OUTPUT_BUCKET --key "transcripts/$(basename -- "$finished_output_path")" --body $finished_output_path
 
 echo "Great Job! $LIMEKALDI_INPUT_KEY" > ./donefile
-aws --endpoint-url 'http://s3-bos.wgbh.org' s3api put-object --bucket $LIMEKALDI_OUTPUT_BUCKET --key lime-kaldi-successes/$LIMEKALDI_UID.txt --body ./donefile
+aws s3api put-object --bucket $LIMEKALDI_OUTPUT_BUCKET --key lime-kaldi-successes/$LIMEKALDI_UID.txt --body ./donefile
 echo "Uploaded done file..."
 
 echo "Im done!"

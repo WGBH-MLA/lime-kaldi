@@ -137,8 +137,8 @@ spec:
       image: foggbh/lime-kaldi-worker:latest
       resources:
         limits:
-          memory: "8000Mi"
-          cpu: "5000m"
+          memory: "9000Mi"
+          cpu: "1200m"
       volumeMounts:
       - mountPath: /root/.aws
         name: obstoresecrets
@@ -182,7 +182,7 @@ jobs.each do |job|
   end
 
   puts "There are #{num_lime_workers} running right now..."
-  if num_lime_workers.to_i < 2
+  if num_lime_workers.to_i < 4
 
     puts "Ooh yeah - I'm starting #{job["uid"]}!"
     begin_job(job["uid"])

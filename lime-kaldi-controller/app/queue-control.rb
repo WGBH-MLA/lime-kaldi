@@ -182,7 +182,7 @@ jobs.each do |job|
   end
 
   puts "There are #{num_lime_workers} running right now..."
-  if num_lime_workers.to_i < 6
+  if num_lime_workers.to_i < 4
 
     puts "Ooh yeah - I'm starting #{job["uid"]}!"
     begin_job(job["uid"])

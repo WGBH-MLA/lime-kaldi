@@ -39,7 +39,7 @@ end
 
 def get_pod_name(uid, job_type)
   if job_type == JobType::CreateTranscriptB
-    %(lime-kaldi-worker-b-#{uid})
+    %(lime-kaldi-workb-#{uid})
     # additional jobtypes can be provided for here
   end
 end
@@ -110,10 +110,10 @@ def begin_job(uid)
 apiVersion: v1
 kind: Pod
 metadata:
-  name: lime-kaldi-worker-b-#{uid}
+  name: lime-kaldi-workb-#{uid}
   namespace: lime-kaldi
   labels:
-    app: lime-kaldi-worker-b
+    app: lime-kaldi-workb
 spec:
   affinity:
     podAntiAffinity:
@@ -123,7 +123,7 @@ spec:
           - key: app
             operator: In
             values:
-            - lime-kaldi-worker-b
+            - lime-kaldi-workb
         topologyKey: kubernetes.io/hostname
         
   volumes:
@@ -133,7 +133,7 @@ spec:
         optional: false
         secretName: obstoresecrets
   containers:
-    - name: lime-kaldi-worker-b
+    - name: lime-kaldi-workb
       image: foggbh/lime-kaldi-worker:latest
       resources:
         limits:

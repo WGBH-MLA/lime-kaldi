@@ -14,7 +14,7 @@ end
 
 module JobType
   # default
-  CreateTranscript = 0
+  CreateTranscriptB = 1
   # can add more job types here for different settings/etc
 end
 
@@ -38,8 +38,8 @@ def get_donefile_filepath(uid)
 end
 
 def get_pod_name(uid, job_type)
-  if job_type == JobType::CreateTranscript
-    %(lime-kaldi-worker-#{uid})
+  if job_type == JobType::CreateTranscriptB
+    %(lime-kaldi-worker-b-#{uid})
     # additional jobtypes can be provided for here
   end
 end
@@ -83,7 +83,7 @@ def check_file_exists(bucket, file)
   s3_output && s3_output != ""
 end
 
-# def init_job(input_filepath, job_type=JobType::CreateTranscript)
+# def init_job(input_filepath, job_type=JobType::CreateTranscriptB)
 #   # chck if job already started..
 #   # return if already found
 #   uid = SecureRandom.uuid
@@ -104,16 +104,16 @@ def begin_job(uid)
   input_folder = fp.dirname
   input_filename = fp.basename
 
-  if job["job_type"] == JobType::CreateTranscript
+  if job["job_type"] == JobType::CreateTranscriptB
 
     pod_yml_content = %{
 apiVersion: v1
 kind: Pod
 metadata:
-  name: lime-kaldi-worker-#{uid}
+  name: lime-kaldi-worker-b-#{uid}
   namespace: lime-kaldi
   labels:
-    app: lime-kaldi-worker
+    app: lime-kaldi-worker-b
 spec:
   affinity:
     podAntiAffinity:
@@ -123,7 +123,7 @@ spec:
           - key: app
             operator: In
             values:
-            - lime-kaldi-worker
+            - lime-kaldi-worker-b
         topologyKey: kubernetes.io/hostname
         
   volumes:
@@ -133,7 +133,7 @@ spec:
         optional: false
         secretName: obstoresecrets
   containers:
-    - name: lime-kaldi-worker
+    - name: lime-kaldi-worker-b
       image: foggbh/lime-kaldi-worker:latest
       resources:
         limits:
@@ -160,21 +160,21 @@ spec:
   # if you need to ensure that newest is coming through from docker hub
   # imagePullPolicy: Always
 
-  File.open('/root/pod.yml', 'w+') do |f|
+  File.open('/root/pod-b.yml', 'w+') do |f|
     f << pod_yml_content
   end
 
   puts "I sure would like to start #{uid} for #{input_filename}!"
-  puts `kubectl --kubeconfig /mnt/kubectl-secret --namespace=lime-kaldi apply -f /root/pod.yml`
+  puts `kubectl --kubeconfig /mnt/kubectl-secret --namespace=lime-kaldi apply -f /root/pod-b.yml`
   set_job_status(uid, JobStatus::Working)
 end
 
 # actually start jobs that we successfully initted above - limit 48 so we dont ask 'how many pods' a thousand times every cycle, but have enough of a buffer to get 4 new pods for any issues talking to kube
-jobs = @client.query("SELECT * FROM jobs WHERE status=#{JobStatus::New} AND job_type=#{ JobType::CreateTranscript } LIMIT 24")
+jobs = @client.query("SELECT * FROM jobs WHERE status=#{JobStatus::New} AND job_type=#{ JobType::CreateTranscriptB } LIMIT 24")
 puts "Found #{jobs.count} jobs with JS::New"
 jobs.each do |job|
 
-  num_lime_workers = `/root/app/check_number_pods.sh`
+  num_lime_workers = `/root/app/check_number_pods_b.sh`
 
   if num_lime_workers.to_i == -1
     puts "Failed to grab number of pods due to TLS error... skipping starting job on #{job["uid"]} this time around"
@@ -191,14 +191,14 @@ end
 
 # check if file Status::WORKING exists on objectstore, mark as completedWork if done...
 # job.each...
-jobs = @client.query("SELECT * FROM jobs WHERE status=#{JobStatus::Working} AND job_type=#{ JobType::CreateTranscript }")
+jobs = @client.query("SELECT * FROM jobs WHERE status=#{JobStatus::Working} AND job_type=#{ JobType::CreateTranscriptB }")
 puts "Found #{jobs.count} jobs with JS::Working"
 jobs.each do |job|
   puts "Found JS::Working job #{job.inspect}, checking pod #{job["uid"]}"
   
-  if job["job_type"] == JobType::CreateTranscript
+  if job["job_type"] == JobType::CreateTranscriptB
     donefilepath = get_donefile_filepath(job["uid"])
-    puts "CreateTranscript CHECK:: Now searching for Done file #{donefilepath}"
+    puts "CreateTranscriptB CHECK:: Now searching for Done file #{donefilepath}"
     resp = `aws s3api head-object --bucket lime-kaldi-output --key #{donefilepath}`
     # if done file is present, work completed successfully
     job_finished = !resp.empty?

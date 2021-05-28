@@ -14,11 +14,13 @@ RUN unzip /root/awscli-exe-linux-x86_64.zip && aws/install
 
 COPY queue-control-cron /var/spool/cron/crontabs/root
 RUN touch /var/log/queue-control.log
+RUN touch /var/log/queue-control-b.log
 
 ADD app/ app/
 WORKDIR /root/app/
 RUN chmod +x /root/app/check_number_pods.sh
+RUN chmod +x /root/app/check_number_pods_b.sh
 RUN gem install bundler
 RUN bundle install
 
-CMD service cron start && tail -f /var/log/queue-control.log
+CMD service cron start && tail -f /var/log/queue-control.log /var/log/queue-control-b.log

@@ -22,7 +22,6 @@ RUN unzip ./american-archive-kaldi.zip && rm american-archive-kaldi.zip
 COPY path.sh /opt/kaldi/egs/american-archive-kaldi/sample_experiment/path.sh
 COPY set-kaldi-path.sh /opt/kaldi/egs/american-archive-kaldi/sample_experiment/set-kaldi-path.sh
 
-# maybe not necessary
 RUN chmod +x /opt/kaldi/egs/american-archive-kaldi/sample_experiment/path.sh /opt/kaldi/egs/american-archive-kaldi/sample_experiment/set-kaldi-path.sh
 
 # ~symlink wsj steps folder to our sample experiment, baby!~

@@ -15,6 +15,7 @@ end
 module JobType
   # default
   CreateTranscript = 0
+  DownloadFromCi = 2
   # can add more job types here for different settings/etc
 end
 
@@ -54,25 +55,6 @@ def set_job_status(uid, new_status, fail_reason=nil)
   end
 end
 
-# def validate_for_init(input_bucketname, input_filepath, job_type)
-#   # check for jobs with SAME input key that DID NOT fail
-#   results = @client.query(%(SELECT * FROM jobs WHERE input_bucketname="#{input_bucketname}" AND input_filepath="#{input_filepath} AND job_type=#{job_type} AND status!=3"))
-#   puts results.inspect
-#   # if theres no redundant job for this key, we're good to init the job
-#   results.count == 0
-# end
-
-# def validate_for_jobstart(uid, job_type, input_bucketname,  input_filepath)
-#   # check that input file exists
-#   unless check_file_exists(input_bucketname, input_filepath)
-#     set_job_status(uid, JobStatus::Fail, "Input file at bucket: #{input_bucketname} key: #{input_filepath} was not found on Object Store...")
-#     return false
-#   end
-#   # check that file not too big
-#   # TODO here we will read output as json... check ContentLength key for size bigness check
-#   true
-# end
-
 def get_file_info(bucket, key)
  `aws s3api head-object --bucket #{bucket} --key #{key}`
 end
@@ -82,16 +64,6 @@ def check_file_exists(bucket, file)
   # ruby return value is "" for an s3 404
   s3_output && s3_output != ""
 end
-
-# def init_job(input_filepath, job_type=JobType::CreateTranscript)
-#   # chck if job already started..
-#   # return if already found
-#   uid = SecureRandom.uuid
-#   query = %(INSERT INTO jobs (uid, status, input_filepath, job_type) VALUES("#{uid}", #{JobStatus::New}, "#{input_filepath}", "#{job_type}"))
-#   puts query
-#   resp = @client.query(query)
-#   return uid
-# end
 
 def begin_job(uid)
   job = @client.query(%(SELECT * FROM jobs WHERE uid="#{uid}")).first
@@ -155,7 +127,61 @@ spec:
   imagePullSecrets:
       - name: mla-dockerhub
   }
+
+elsif job["job_type"] == JobType::DownloadFromCi
+
+    pod_yml_content = %{
+apiVersion: v1
+kind: Pod
+metadata:
+  name: lime-kaldi-worker-#{uid}
+  namespace: lime-kaldi
+  labels:
+    app: lime-kaldi-worker
+spec:
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app
+            operator: In
+            values:
+            - lime-kaldi-worker
+        topologyKey: kubernetes.io/hostname
+        
+  volumes:
+    - name: obstoresecrets
+      secret:
+        defaultMode: 256
+        optional: false
+        secretName: obstoresecrets
+  containers:
+    - name: lime-kaldi-worker
+      image: foggbh/lime-kaldi-download:latest
+      resources:
+        limits:
+          memory: "9000Mi"
+          cpu: "1200m"
+      volumeMounts:
+      - mountPath: /root/.aws
+        name: obstoresecrets
+        readOnly: true
+      env:
+      - name: DOWNLOAD_UID
+        value: #{uid}
+      - name: DOWNLOAD_GUID
+        value: #{ guid }
+      - name: DOWNLOAD_OUTPUT_BUCKET
+        value: #{ output_bucket }
+  imagePullSecrets:
+      - name: mla-dockerhub
+  }
   end
+
+      # not included for now
+      # - name: DOWNLOAD_OUTPUT_KEY
+      #   value: #{ input_filepath }
 
   # if you need to ensure that newest is coming through from docker hub
   # imagePullPolicy: Always
@@ -199,6 +225,13 @@ jobs.each do |job|
   if job["job_type"] == JobType::CreateTranscript
     donefilepath = get_donefile_filepath(job["uid"])
     puts "CreateTranscript CHECK:: Now searching for Done file #{donefilepath}"
+    resp = `aws s3api head-object --bucket lime-kaldi-output --key #{donefilepath}`
+    # if done file is present, work completed successfully
+    job_finished = !resp.empty?
+    puts "Done File #{job["uid"]} was found on object store" if job_finished
+  elsif job["job_type"] == JobType::DownloadFromCi
+
+    puts "DownloadFromCi CHECK:: Now searching for Done file #{donefilepath}"
     resp = `aws s3api head-object --bucket lime-kaldi-output --key #{donefilepath}`
     # if done file is present, work completed successfully
     job_finished = !resp.empty?

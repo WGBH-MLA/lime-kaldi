@@ -1,0 +1,6 @@
+source 'https://rubygems.org'
+
+ruby '2.7.3'
+
+gem 'nokogiri'
+gem 'sony_ci_api', git: 'https://github.com/WGBH-MLA/sony_ci_api_rewrite.git'

@@ -5,6 +5,9 @@ require 'securerandom'
 require 'json'
 require 'pathname'
 
+
+NUMBER_OF_QUEUES = 2
+
 module JobStatus
   New = 0
   Working = 1
@@ -15,7 +18,7 @@ end
 module JobType
   # default
   CreateTranscript = 0
-  DownloadFromCi = 2
+  DownloadFromCi = 1
   # can add more job types here for different settings/etc
 end
 
@@ -38,9 +41,9 @@ def get_donefile_filepath(uid)
   %(lime-kaldi-successes/#{uid}.txt)
 end
 
-def get_pod_name(uid, job_type)
+def get_pod_name(queue_number, uid, job_type)
   if job_type == JobType::CreateTranscript
-    %(lime-kaldi-worker-#{uid})
+    %(lime-kaldi-worker-#{ get_queue_label(queue_number) }-#{uid})
     # additional jobtypes can be provided for here
   end
 end
@@ -65,7 +68,11 @@ def check_file_exists(bucket, file)
   s3_output && s3_output != ""
 end
 
-def begin_job(uid)
+def get_queue_label(queue_number)
+  "queue#{queue_number}"  
+end
+
+def begin_job(queue_number, uid)
   job = @client.query(%(SELECT * FROM jobs WHERE uid="#{uid}")).first
   puts job.inspect
   
@@ -82,10 +89,10 @@ def begin_job(uid)
 apiVersion: v1
 kind: Pod
 metadata:
-  name: lime-kaldi-worker-#{uid}
+  name: lime-kaldi-worker-#{ get_queue_label(queue_number) }-#{uid}
   namespace: lime-kaldi
   labels:
-    app: lime-kaldi-worker
+    app: lime-kaldi-worker-#{ get_queue_label(queue_number) }
 spec:
   affinity:
     podAntiAffinity:
@@ -95,7 +102,7 @@ spec:
           - key: app
             operator: In
             values:
-            - lime-kaldi-worker
+            - lime-kaldi-worker-#{ get_queue_label(queue_number) }
         topologyKey: kubernetes.io/hostname
         
   volumes:
@@ -134,10 +141,10 @@ elsif job["job_type"] == JobType::DownloadFromCi
 apiVersion: v1
 kind: Pod
 metadata:
-  name: lime-kaldi-worker-#{uid}
+  name: lime-kaldi-worker-#{ get_queue_label(queue_number) }-#{uid}
   namespace: lime-kaldi
   labels:
-    app: lime-kaldi-worker
+    app: lime-kaldi-worker-#{ get_queue_label(queue_number) }
 spec:
   affinity:
     podAntiAffinity:
@@ -147,7 +154,7 @@ spec:
           - key: app
             operator: In
             values:
-            - lime-kaldi-worker
+            - lime-kaldi-worker-#{ get_queue_label(queue_number) }
         topologyKey: kubernetes.io/hostname
         
   volumes:
@@ -195,29 +202,34 @@ spec:
   set_job_status(uid, JobStatus::Working)
 end
 
-# actually start jobs that we successfully initted above - limit 48 so we dont ask 'how many pods' a thousand times every cycle, but have enough of a buffer to get 4 new pods for any issues talking to kube
-jobs = @client.query("SELECT * FROM jobs WHERE status=#{JobStatus::New} AND job_type=#{ JobType::CreateTranscript } LIMIT 24")
-puts "Found #{jobs.count} jobs with JS::New"
-jobs.each do |job|
 
-  num_lime_workers = `/root/app/check_number_pods.sh`
+NUMBER_OF_QUEUES.times do |queue_number|
 
-  if num_lime_workers.to_i == -1
-    puts "Failed to grab number of pods due to TLS error... skipping starting job on #{job["uid"]} this time around"
-    next
-  end
+  jobs = @client.query("SELECT * FROM jobs WHERE queue_number=#{ queue_number } AND status=#{JobStatus::New} AND job_type=#{ JobType::CreateTranscript } LIMIT 24")
+  # actually start jobs that we successfully initted above - limit 48 so we dont ask 'how many pods' a thousand times every cycle, but have enough of a buffer to get 4 new pods for any issues talking to kube  puts "Found #{jobs.count} jobs with JS::New"
+  
+  jobs.each do |job|
 
-  puts "There are #{num_lime_workers} running right now..."
-  if num_lime_workers.to_i < 4
+    # check how many workers in this queue only
+    num_lime_workers = `/root/app/check_number_pods.sh #{ get_queue_label(queue_number) }`
 
-    puts "Ooh yeah - I'm starting #{job["uid"]}!"
-    begin_job(job["uid"])
+    if num_lime_workers.to_i == -1
+      puts "Failed to grab number of pods due to TLS error... skipping starting job on #{job["uid"]} this time around"
+      next
+    end
+
+    puts "There are #{num_lime_workers} running right now..."
+    if num_lime_workers.to_i < 4
+
+      puts "Ooh yeah - I'm starting #{job["uid"]}!"
+      begin_job(job["queue_number"], job["uid"])
+    end
   end
 end
 
 # check if file Status::WORKING exists on objectstore, mark as completedWork if done...
 # job.each...
-jobs = @client.query("SELECT * FROM jobs WHERE status=#{JobStatus::Working} AND job_type=#{ JobType::CreateTranscript }")
+jobs = @client.query("SELECT * FROM jobs WHERE status=#{ JobStatus::Working } AND job_type=#{ JobType::CreateTranscript }")
 puts "Found #{jobs.count} jobs with JS::Working"
 jobs.each do |job|
   puts "Found JS::Working job #{job.inspect}, checking pod #{job["uid"]}"
@@ -238,9 +250,9 @@ jobs.each do |job|
     puts "Done File #{job["uid"]} was found on object store" if job_finished
   end
 
-  puts "Got OBSTORE response #{resp} for #{job["uid"]}"
+  puts "Got OBSTORE response #{resp} for #{job["uid"]} in Queue #{queun}"
 
-  pod_name = get_pod_name(job["uid"], job["job_type"])
+  pod_name = get_pod_name(job["queue_number"], job["uid"], job["job_type"])
   # (now this is pod naming)
 
   if job_finished
@@ -268,7 +280,6 @@ jobs.each do |job|
   end
 end
 
-
 # CREATE TABLE jobs (uid varchar(255), status int, input_filepath varchar(1024), fail_reason varchar(1024), created_at datetime DEFAULT CURRENT_TIMESTAMP, job_type int DEFAULT 0, input_bucketname varchar(1024));
 
 # moving car
@@ -276,4 +287,8 @@ end
 # ALTER TABLE jobs ADD COLUMN created_at datetime DEFAULT CURRENT_TIMESTAMP
 
 # ALTER TABLE jobs ADD COLUMN input_bucketname varchar(1024);
+
+# ALTER TABLE jobs ADD COLUMN queue_number int DEFAULT 0;
+
+# CREATE TABLE next_queue_number (number int DEFAULT 0);
 

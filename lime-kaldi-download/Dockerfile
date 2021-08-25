@@ -1,6 +1,7 @@
 FROM ruby:2.7.4
 
 COPY app/ /root/app
+WORKDIR /root/app/
 RUN bundle install
 RUN chmod +x /root/app/download.rb
 

@@ -1,2 +1,1 @@
 * * * * * bash -lc "cd /root/app && bundle install && bundle exec ruby queue-control.rb >> /var/log/queue-control.log 2>&1"
-* * * * * bash -lc "cd /root/app && bundle install && bundle exec ruby queue-control-b.rb >> /var/log/queue-control-b.log 2>&1"

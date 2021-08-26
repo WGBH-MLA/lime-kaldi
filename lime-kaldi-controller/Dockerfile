@@ -23,4 +23,4 @@ RUN chmod +x /root/app/check_number_pods_b.sh
 RUN gem install bundler
 RUN bundle install
 
-CMD service cron start && tail -f /var/log/queue-control.log /var/log/queue-control-b.log
+CMD service cron start && tail -f /var/log/queue-control.log

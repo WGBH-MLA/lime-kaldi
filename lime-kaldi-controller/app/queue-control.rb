@@ -166,6 +166,7 @@ spec:
   containers:
     - name: lime-kaldi-worker
       image: foggbh/lime-kaldi-download:latest
+      imagePullPolicy: Always
       resources:
         limits:
           memory: "9000Mi"
@@ -178,9 +179,9 @@ spec:
       - name: DOWNLOAD_UID
         value: #{uid}
       - name: DOWNLOAD_GUID
-        value: #{ guid }
+        value: #{ input_filepath }
       - name: DOWNLOAD_OUTPUT_BUCKET
-        value: #{ output_bucket }
+        value: lime-kaldi-output
   imagePullSecrets:
       - name: mla-dockerhub
   }
@@ -250,7 +251,7 @@ jobs.each do |job|
     puts "Done File #{job["uid"]} was found on object store" if job_finished
   end
 
-  puts "Got OBSTORE response #{resp} for #{job["uid"]} in Queue #{queun}"
+  puts "Got OBSTORE response #{resp} for #{job["uid"]} in Queue #{queue_number}"
 
   pod_name = get_pod_name(job["queue_number"], job["uid"], job["job_type"])
   # (now this is pod naming)
@@ -280,7 +281,7 @@ jobs.each do |job|
   end
 end
 
-# CREATE TABLE jobs (uid varchar(255), status int, input_filepath varchar(1024), fail_reason varchar(1024), created_at datetime DEFAULT CURRENT_TIMESTAMP, job_type int DEFAULT 0, input_bucketname varchar(1024));
+# CREATE TABLE jobs (uid varchar(255), status int, input_filepath varchar(1024), fail_reason varchar(1024), created_at datetime DEFAULT CURRENT_TIMESTAMP, job_type int DEFAULT 0, input_bucketname varchar(1024), queue_number int DEFAULT 0);
 
 # moving car
 # ALTER TABLE jobs ADD COLUMN job_type int DEFAULT 0

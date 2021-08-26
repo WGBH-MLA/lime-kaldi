@@ -20,7 +20,7 @@ xml = `curl https://americanarchive.org/catalog/#{guid}.pbcore`
 
 # get CI_ID from xml
 doc = Nokogiri::XML(xml)
-ci_id = doc.xpath("/*/pbcoreIdentifier[@source="Sony Ci"]").first
+ci_id = doc.xpath( %(/*/pbcoreIdentifier[@source="Sony Ci"]) ).first
 
 # where to download it to
 local_path = %(/root/#{File.basename(output_key)})

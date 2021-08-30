@@ -72,18 +72,17 @@ def get_queue_label(queue_number)
   "queue#{queue_number}"  
 end
 
-def begin_job(queue_number, uid)
-  job = @client.query(%(SELECT * FROM jobs WHERE uid="#{uid}")).first
-  puts job.inspect
-  
-  input_filepath = job["input_filepath"]
-  input_bucketname = job["input_bucketname"]
+def begin_job(queue_number, uid, job_type, input_filepath, input_bucketname)
+  # job = @client.query(%(SELECT * FROM jobs WHERE uid="#{uid}")).first
+  # puts job.inspect
+  # input_filepath = job["input_filepath"]
+  # input_bucketname = job["input_bucketname"]
 
   fp = Pathname.new(input_filepath)
   input_folder = fp.dirname
   input_filename = fp.basename
 
-  if job["job_type"] == JobType::CreateTranscript
+  if job_type == JobType::CreateTranscript
 
     pod_yml_content = %{
 apiVersion: v1
@@ -135,7 +134,7 @@ spec:
       - name: mla-dockerhub
   }
 
-elsif job["job_type"] == JobType::DownloadFromCi
+elsif job_type == JobType::DownloadFromCi
 
     pod_yml_content = %{
 apiVersion: v1
@@ -206,7 +205,7 @@ end
 
 NUMBER_OF_QUEUES.times do |queue_number|
 
-  jobs = @client.query("SELECT * FROM jobs WHERE queue_number=#{ queue_number } AND status=#{JobStatus::New} AND job_type=#{ JobType::CreateTranscript } LIMIT 24")
+  jobs = @client.query("SELECT * FROM jobs WHERE queue_number=#{ queue_number } AND status=#{JobStatus::New} LIMIT 24")
   # actually start jobs that we successfully initted above - limit 48 so we dont ask 'how many pods' a thousand times every cycle, but have enough of a buffer to get 4 new pods for any issues talking to kube  puts "Found #{jobs.count} jobs with JS::New"
   
   jobs.each do |job|
@@ -223,14 +222,14 @@ NUMBER_OF_QUEUES.times do |queue_number|
     if num_lime_workers.to_i < 4
 
       puts "Ooh yeah - I'm starting #{job["uid"]}!"
-      begin_job(job["queue_number"], job["uid"])
+      begin_job(job["queue_number"], job["uid"], job["job_type"], job["input_filepath"], job["input_bucketname"])
     end
   end
 end
 
 # check if file Status::WORKING exists on objectstore, mark as completedWork if done...
 # job.each...
-jobs = @client.query("SELECT * FROM jobs WHERE status=#{ JobStatus::Working } AND job_type=#{ JobType::CreateTranscript }")
+jobs = @client.query("SELECT * FROM jobs WHERE status=#{ JobStatus::Working }")
 puts "Found #{jobs.count} jobs with JS::Working"
 jobs.each do |job|
   puts "Found JS::Working job #{job.inspect}, checking pod #{job["uid"]}"
@@ -251,7 +250,7 @@ jobs.each do |job|
     puts "Done File #{job["uid"]} was found on object store" if job_finished
   end
 
-  puts "Got OBSTORE response #{resp} for #{job["uid"]} in Queue #{queue_number}"
+  puts "Got OBSTORE response #{resp} for #{job["uid"]} in Queue #{job["queue_number"]}"
 
   pod_name = get_pod_name(job["queue_number"], job["uid"], job["job_type"])
   # (now this is pod naming)

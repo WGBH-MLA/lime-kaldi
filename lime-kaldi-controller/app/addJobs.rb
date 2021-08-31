@@ -20,7 +20,7 @@ require 'securerandom'
 
 queue_number = 0
 
-[File.readlines("KS_GUIDsfortranscripts_2.txt").first].each do |guid|
+[File.readlines("/root/KS_GUIDsfortranscripts_2.txt").first].each do |guid|
   uid = SecureRandom.uuid
 
   puts "Adding DownloadFromCi Job for #{guid}..."
@@ -32,6 +32,8 @@ queue_number = 0
   # toggle to evenly distrubte between queues
   queue_number = queue_number == 0 ? 1 : 0
 end
+
+return
 
 [File.readlines("KS_GUIDsfortranscripts_2.txt").first].each do |guid|
   uid = SecureRandom.uuid

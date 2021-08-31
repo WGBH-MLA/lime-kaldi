@@ -174,6 +174,9 @@ spec:
       - mountPath: /root/.aws
         name: obstoresecrets
         readOnly: true
+      - mountPath: /root/ci-config
+        name: ci-config
+        readOnly: true
       env:
       - name: DOWNLOAD_UID
         value: #{uid}

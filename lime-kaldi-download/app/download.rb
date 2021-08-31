@@ -22,9 +22,6 @@ xml = `curl https://americanarchive.org/catalog/#{guid}.pbcore`
 doc = Nokogiri::XML(xml)
 ci_id = doc.xpath( %(/*/pbcoreIdentifier[@source="Sony Ci"]) ).first
 
-# where to download it to
-local_path = %(/root/#{File.basename(output_key)})
-
 # make OUTPUTFILENAME
 # form default output key if not specifieid
 if !output_key
@@ -32,13 +29,17 @@ if !output_key
   output_key = "#{guid}.#{ext}"
 end
 
+# where to download it to
+local_path = %(/root/#{File.basename(output_key)})
+
+
 # if DESTINATIONFILE already exists   --- fail (use succeed for the moment)
 resp = `aws s3api head-object --bucket #{output_bucket} --key #{output_key}`
 fail_job(job_uid) unless resp.empty?
 
 
 # mounted secret on rancher
-@client = SonyCiApi.new("/root/ci_credential")
+@client = SonyCiApi::Client.new( File.read("/root/ci_config") )
 File.open(local_path, "wb") do |f|
   f.write( open( @client.download(ci_id) ) {|g| g.read } )
 end

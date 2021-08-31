@@ -236,9 +236,10 @@ jobs = @client.query("SELECT * FROM jobs WHERE status=#{ JobStatus::Working }")
 puts "Found #{jobs.count} jobs with JS::Working"
 jobs.each do |job|
   puts "Found JS::Working job #{job.inspect}, checking pod #{job["uid"]}"
+
+  donefilepath = get_donefile_filepath(job["uid"])
   
   if job["job_type"] == JobType::CreateTranscript
-    donefilepath = get_donefile_filepath(job["uid"])
     puts "CreateTranscript CHECK:: Now searching for Done file #{donefilepath}"
     resp = `aws s3api head-object --bucket lime-kaldi-output --key #{donefilepath}`
     # if done file is present, work completed successfully

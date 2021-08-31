@@ -39,7 +39,7 @@ fail_job(job_uid) unless resp.empty?
 
 
 # mounted secret on rancher
-@client = SonyCiApi::Client.new( File.read("/root/ci_config") )
+@client = SonyCiApi::Client.new( File.read("/root/ci-config") )
 File.open(local_path, "wb") do |f|
   f.write( open( @client.download(ci_id) ) {|g| g.read } )
 end

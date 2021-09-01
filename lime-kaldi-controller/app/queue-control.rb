@@ -162,6 +162,11 @@ spec:
         defaultMode: 256
         optional: false
         secretName: obstoresecrets
+    - name: ci-config
+      secret:
+        defaultMode: 256
+        optional: false
+        secretName: ci-config        
   containers:
     - name: lime-kaldi-worker
       image: foggbh/lime-kaldi-download:latest

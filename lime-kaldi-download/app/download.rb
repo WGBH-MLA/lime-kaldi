@@ -2,6 +2,22 @@
 
 require 'nokogiri'
 require 'sony_ci_api'
+require 'open-uri'
+
+
+# s3 upload to OUTPUTBUCKET/OUTPUTFILENAME
+def fail_job(job_uid, guid)
+  puts "Oh no! Failing job..."
+  `echo 'Oops I did something bad! #{guid}' > ./#{job_uid}.txt`
+  # until runner starts looking for failures
+  `aws s3api put-object --bucket lime-kaldi-output --key lime-kaldi-successes/#{job_uid}`
+end
+
+def succeed_job(job_uid, guid)
+  puts "Oh no! Failing job..."
+  `echo "Great Job! #{guid}" > ./donefile`
+  `aws s3api put-object --bucket lime-kaldi-output --key lime-kaldi-successes/#{job_uid}.txt --body ./donefile`
+end
 
 # DOWNLOAD_GUID
 # DOWNLOAD_OUTPUT_KEY (optional)
@@ -15,9 +31,10 @@ unless guid && !guid.empty? && output_bucket && !output_bucket.empty?
   fail_job(job_uid)
 end
 
+puts "Ok! Starting #{job_uid} work with GUID: #{guid}, Output Bucket: #{output_bucket}#{ output_key ? ", Output Key(opt): #{output_key}" : "" }"
+
 # download aapb guid.pbcore
 xml = `curl https://americanarchive.org/catalog/#{guid}.pbcore`
-
 puts "Found XML of length #{xml.length}"
 
 # get CI_ID from xml
@@ -46,25 +63,12 @@ fail_job(job_uid) unless resp.empty?
 # mounted secret on rancher
 @client = SonyCiApi::Client.new( "/root/ci-config/ci-config.yml" )
 File.open(local_path, "wb") do |f|
-  f.write( open( @client.asset_download(ci_id) ) {|g| g.read } )
+  url = @client.asset_download(ci_id)["location"]
+  f.write( URI.open( url ) {|f| f.read } )
 end
 
 # upload file duh
-`aws s3api put-object --bucket #{output_bucket} --key #{output_key} --body ./#{ local_path }`
+`aws s3api put-object --bucket #{output_bucket} --key #{output_key} --body #{ local_path }`
 
 # success
 succeed_job(job_uid)
-
-# s3 upload to OUTPUTBUCKET/OUTPUTFILENAME
-def fail_job(job_uid, guid)
-  puts "Oh no! Failing job..."
-  `echo 'Oops I did something bad! #{guid}' > ./#{job_uid}.txt`
-  # until runner starts looking for failures
-  `aws s3api put-object --bucket lime-kaldi-output --key lime-kaldi-successes/#{job_uid}`
-end
-
-def succeed_job(job_uid, guid)
-  puts "Oh no! Failing job..."
-  `echo "Great Job! #{guid}" > ./donefile`
-  `aws s3api put-object --bucket lime-kaldi-output --key lime-kaldi-successes/#{job_uid}.txt --body ./donefile`
-end

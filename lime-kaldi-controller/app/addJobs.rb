@@ -24,7 +24,7 @@ queue_number = 0
   uid = SecureRandom.uuid
 
   puts "Adding DownloadFromCi Job for #{guid}..."
-  query = %(INSERT INTO jobs (uid, status, input_filepath, input_bucketname, job_type, queue_number) VALUES("#{uid}", #{JobStatus::New}, "#{guid.gsub("\n", "")}.mp3", "lime-kaldi-input", #{ JobType::DownloadFromCi }, #{queue_number}))
+  query = %(INSERT INTO jobs (uid, status, input_filepath, input_bucketname, job_type, queue_number) VALUES("#{uid}", #{JobStatus::New}, "#{ guid.gsub("\n", "") }", "lime-kaldi-input", #{ JobType::DownloadFromCi }, #{queue_number}))
   puts query
   resp = @client.query(query)
   puts resp

@@ -18,30 +18,35 @@ end
 # download aapb guid.pbcore
 xml = `curl https://americanarchive.org/catalog/#{guid}.pbcore`
 
+puts "Found XML of length #{xml.length}"
+
 # get CI_ID from xml
 doc = Nokogiri::XML(xml)
-ci_id = doc.xpath( %(/*/pbcoreIdentifier[@source="Sony Ci"]) ).first
+doc.remove_namespaces!
+ci_node = doc.xpath( %(/*/pbcoreIdentifier[@source="Sony Ci"]) ).first
+ci_id = ci_node.text if ci_node
+puts "CI ID found #{ci_id}"
 
 # make OUTPUTFILENAME
 # form default output key if not specifieid
 if !output_key
   ext = doc.xpath("/*/pbcoreInstantiation/instantiationMediaType").first == "Moving Image" ? "mp4" : "mp3"
   output_key = "#{guid}.#{ext}"
+
+  puts "Output key is #{output_key}"
 end
 
 # where to download it to
 local_path = %(/root/#{File.basename(output_key)})
 
-
 # if DESTINATIONFILE already exists   --- fail (use succeed for the moment)
 resp = `aws s3api head-object --bucket #{output_bucket} --key #{output_key}`
 fail_job(job_uid) unless resp.empty?
 
-
 # mounted secret on rancher
-@client = SonyCiApi::Client.new( File.read("/root/ci-config/ci-config") )
+@client = SonyCiApi::Client.new( "/root/ci-config/ci-config.yml" )
 File.open(local_path, "wb") do |f|
-  f.write( open( @client.download(ci_id) ) {|g| g.read } )
+  f.write( open( @client.asset_download(ci_id) ) {|g| g.read } )
 end
 
 # upload file duh
@@ -63,4 +68,3 @@ def succeed_job(job_uid, guid)
   `echo "Great Job! #{guid}" > ./donefile`
   `aws s3api put-object --bucket lime-kaldi-output --key lime-kaldi-successes/#{job_uid}.txt --body ./donefile`
 end
-

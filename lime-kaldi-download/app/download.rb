@@ -8,13 +8,13 @@ require 'open-uri'
 # s3 upload to OUTPUTBUCKET/OUTPUTFILENAME
 def fail_job(job_uid, guid)
   puts "Oh no! Failing job..."
-  `echo 'Oops I did something bad! #{guid}' > ./#{job_uid}.txt`
+  `echo "Oops I did something bad! #{guid}" > ./donefile`
   # until runner starts looking for failures
-  `aws s3api put-object --bucket lime-kaldi-output --key lime-kaldi-successes/#{job_uid}`
+  `aws s3api put-object --bucket lime-kaldi-output --key lime-kaldi-successes/#{job_uid}.txt --body ./donefile`
 end
 
 def succeed_job(job_uid, guid)
-  puts "Oh no! Failing job..."
+  puts "Succeeding job! Hooray!"
   `echo "Great Job! #{guid}" > ./donefile`
   `aws s3api put-object --bucket lime-kaldi-output --key lime-kaldi-successes/#{job_uid}.txt --body ./donefile`
 end
@@ -27,8 +27,16 @@ guid = ENV["DOWNLOAD_GUID"]
 output_key = ENV["DOWNLOAD_OUTPUT_KEY"]
 output_bucket = ENV["DOWNLOAD_OUTPUT_BUCKET"]
 # if no GUID + OUTPUTBUCKET   --- fail
+
+resp = `aws s3api head-object --bucket lime-kaldi-output --key lime-kaldi-successes/#{job_uid}`
+unless resp.empty?
+  puts "Job is already complete! See you later!"
+end
+
 unless guid && !guid.empty? && output_bucket && !output_bucket.empty?
+  puts "missing params, failing job..."
   fail_job(job_uid)
+  return
 end
 
 puts "Ok! Starting #{job_uid} work with GUID: #{guid}, Output Bucket: #{output_bucket}#{ output_key ? ", Output Key(opt): #{output_key}" : "" }"
@@ -58,7 +66,11 @@ local_path = %(/root/#{File.basename(output_key)})
 
 # if DESTINATIONFILE already exists   --- fail (use succeed for the moment)
 resp = `aws s3api head-object --bucket #{output_bucket} --key #{output_key}`
-fail_job(job_uid) unless resp.empty?
+unless resp.empty?
+  puts "destination file already exists, failing job..."
+  fail_job(job_uid, guid) 
+  return
+end
 
 # mounted secret on rancher
 @client = SonyCiApi::Client.new( "/root/ci-config/ci-config.yml" )
@@ -71,4 +83,5 @@ end
 `aws s3api put-object --bucket #{output_bucket} --key #{output_key} --body #{ local_path }`
 
 # success
-succeed_job(job_uid)
+puts "Great job! Marking success..."
+succeed_job(job_uid, guid)

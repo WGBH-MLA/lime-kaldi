@@ -41,11 +41,8 @@ def get_donefile_filepath(uid)
   %(lime-kaldi-successes/#{uid}.txt)
 end
 
-def get_pod_name(queue_number, uid, job_type)
-  if job_type == JobType::CreateTranscript
-    %(lime-kaldi-worker-#{ get_queue_label(queue_number) }-#{uid})
-    # additional jobtypes can be provided for here
-  end
+def get_pod_name(queue_number, uid)
+  %(lime-kaldi-worker-#{ get_queue_label(queue_number) }-#{uid})
 end
 
 def set_job_status(uid, new_status, fail_reason=nil)
@@ -261,7 +258,7 @@ jobs.each do |job|
 
   puts "Got OBSTORE response #{resp} for #{job["uid"]} in Queue #{job["queue_number"]}"
 
-  pod_name = get_pod_name(job["queue_number"], job["uid"], job["job_type"])
+  pod_name = get_pod_name(job["queue_number"], job["uid"])
   # (now this is pod naming)
 
   if job_finished

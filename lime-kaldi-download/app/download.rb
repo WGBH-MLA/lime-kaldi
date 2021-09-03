@@ -28,7 +28,8 @@ output_key = ENV["DOWNLOAD_OUTPUT_KEY"]
 output_bucket = ENV["DOWNLOAD_OUTPUT_BUCKET"]
 # if no GUID + OUTPUTBUCKET   --- fail
 
-resp = `aws s3api head-object --bucket lime-kaldi-output --key lime-kaldi-successes/#{job_uid}`
+# output bucket is usually 'lime-kaldi-input' cause its the input for ts creation
+resp = `aws s3api head-object --bucket #{ output_bucket } --key lime-kaldi-successes/#{job_uid}`
 unless resp.empty?
   puts "Job is already complete! See you later!"
 end

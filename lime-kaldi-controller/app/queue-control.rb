@@ -185,7 +185,7 @@ spec:
       - name: DOWNLOAD_GUID
         value: #{ input_filepath }
       - name: DOWNLOAD_OUTPUT_BUCKET
-        value: lime-kaldi-output
+        value: lime-kaldi-input
   imagePullSecrets:
       - name: mla-dockerhub
   }

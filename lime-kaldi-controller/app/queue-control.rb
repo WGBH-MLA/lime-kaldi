@@ -160,7 +160,7 @@ spec:
         secretName: ci-config        
   containers:
     - name: lime-kaldi-worker
-      image: foggbh/lime-kaldi-download:latest
+      image: mla-dockerhub.wgbh.org/lime-kaldi-download:latest
       resources:
         limits:
           memory: "9000Mi"

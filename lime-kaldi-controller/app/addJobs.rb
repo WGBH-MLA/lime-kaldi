@@ -18,7 +18,7 @@ require 'securerandom'
 
 queue_number = 0
 
-File.readlines("/root/KS_GUIDsfortranscripts_2.txt").each do |guid|
+[File.readlines("/root/KS_GUIDsfortranscripts_2.txt").first].each do |guid|
   uid = SecureRandom.uuid
 
   puts "Adding DownloadFromCi Job for #{guid}..."

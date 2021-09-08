@@ -19,7 +19,7 @@ def succeed_job(job_uid, guid)
   `aws s3api put-object --bucket lime-kaldi-output --key lime-kaldi-successes/#{job_uid}.txt --body ./donefile`
 end
 
-def check_done
+def check_done(job_uid)
   # job first checks its its already done (after reboot)
   resp = `aws s3api head-object --bucket lime-kaldi-output --key lime-kaldi-successes/#{job_uid}.txt`
   !resp.empty?

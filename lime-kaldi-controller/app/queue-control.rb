@@ -161,7 +161,6 @@ spec:
   containers:
     - name: lime-kaldi-worker
       image: foggbh/lime-kaldi-download:latest
-      imagePullPolicy: Always
       resources:
         limits:
           memory: "9000Mi"
@@ -190,7 +189,9 @@ spec:
       #   value: #{ input_filepath }
 
   # if you need to ensure that newest is coming through from docker hub
-  # imagePullPolicy: Always
+    # - name: lime-kaldi-worker
+    #   image: foggbh/lime-kaldi-download:latest
+    #   imagePullPolicy: Always
 
   File.open('/root/pod.yml', 'w+') do |f|
     f << pod_yml_content

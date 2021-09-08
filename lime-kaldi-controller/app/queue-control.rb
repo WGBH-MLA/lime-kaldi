@@ -25,12 +25,6 @@ end
 # load db..
 @client = Mysql2::Client.new(host: "lime-kaldi-mysql", username: "root", database: "limekaldi", password: "", port: 3306)
 
-def get_output_key(input_bucketname, input_key)
-  fp = Pathname.new(input_bucketname + '/' + input_key)
-  # audio and video files are both wrapped in mp4 containers for avalon purposes
-  fp.sub_ext('.mp4')
-end
-
 # def get_errortxt_filepath(uid)
 #   # this is a folder of error files, marking the failure of a job, and containing the full stdout/err from the job itself
 #   %(lime-kaldi-errors/error-#{uid}.txt)

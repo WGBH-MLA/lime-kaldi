@@ -19,6 +19,12 @@ def succeed_job(job_uid, guid)
   `aws s3api put-object --bucket lime-kaldi-output --key lime-kaldi-successes/#{job_uid}.txt --body ./donefile`
 end
 
+def check_done
+  # job first checks its its already done (after reboot)
+  resp = `aws s3api head-object --bucket lime-kaldi-output --key lime-kaldi-successes/#{job_uid}.txt`
+  !resp.empty?
+end
+
 # DOWNLOAD_GUID
 # DOWNLOAD_OUTPUT_KEY (optional)
 # DOWNLOAD_OUTPUT_BUCKET
@@ -28,10 +34,9 @@ output_key = ENV["DOWNLOAD_OUTPUT_KEY"]
 output_bucket = ENV["DOWNLOAD_OUTPUT_BUCKET"]
 # if no GUID + OUTPUTBUCKET   --- fail
 
-# output bucket is usually 'lime-kaldi-input' cause its the input for ts creation
-resp = `aws s3api head-object --bucket #{ output_bucket } --key lime-kaldi-successes/#{job_uid}`
-unless resp.empty?
+if check_done(job_uid)
   puts "Job is already complete! See you later!"
+  return
 end
 
 unless guid && !guid.empty? && output_bucket && !output_bucket.empty?
@@ -81,7 +86,7 @@ File.open(local_path, "wb") do |f|
 end
 
 # upload file duh
-`aws s3api put-object --bucket #{output_bucket} --key #{output_key} --body #{ local_path }`
+`aws s3api put-object --bucket #{ output_bucket } --key #{output_key} --body #{ local_path }`
 
 # success
 puts "Great job! Marking success..."

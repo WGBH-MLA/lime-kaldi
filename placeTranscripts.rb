@@ -1,3 +1,4 @@
+require 'csv'
 require 'json'
 
 def fileInfo(bucket, key)
@@ -11,23 +12,58 @@ def fileExists(bucket, file)
 end
 
 
-transcriptFiles=`ls -l1`.split("\n")
-transcriptFiles.delete("placeTranscripts.rb")
-# transcriptFiles = ["cpb-aacip-528-4q7qn60b7n-transcript.json"]
-transcriptFiles.each do |tf|
-  if !fileExists("americanarchive.org", tf)
+folderContents=`ls -l1`.split("\n")
+folderContents.delete("placeTranscripts.rb")
+transcriptFiles=folderContents
 
-    jsonObj = JSON.parse(File.read(tf))
-    if jsonObj["parts"] && jsonObj["parts"].count > 0
+CSV.open("place-report-#{ Time.now.strftime("%m-%d-%Y-%H:%M") }.csv", "wb") do |csv|
 
-      puts "New Transcript! Pump it! #{tf}"
-      `aws s3api put-object --bucket americanarchive.org --key transcripts/#{tf} --body ./#{tf}`
-      puts "Pump complete."
+  csv << ["Guid", "Existing Transcript Found", "Good Transcript"]
+
+  existingTranscriptFound = false
+  goodTranscript = true
+  transcriptFiles.each do |tf|
+
+    tf_guid = tf.gsub("-transcript.json", "")
+    final_tf_location = %(transcripts/#{ tf_guid }/#{ tf })
+    existingTranscriptFound = fileExists("americanarchive.org", final_tf_location )
+
+    if !existingTranscriptFound
+
+      begin
+        jsonObj = JSON.parse( File.read(tf) )
+        if jsonObj["parts"] && jsonObj["parts"].count > 0
+
+          puts "Good New Transcript! Pump it! #{tf}"
+          `aws s3api put-object --bucket americanarchive.org --key #{ final_tf_location } --body ./#{tf}`
+          puts "Pump complete."
+
+          puts "Removing input file..."
+          `aws s3 mv s3://lime-kaldi-input/#{ tf_guid }.mp3 s3://lime-kaldi-input/processed`
+          `aws s3 mv s3://lime-kaldi-input/#{ tf_guid }.mp4 s3://lime-kaldi-input/processed`
+
+          puts "Moving output file to done folder..."
+          # temporary bad output filenames
+          `aws s3 mv s3://lime-kaldi-output/transcripts/#{ tf.gsub("-transcript.json", ".json-transcript.json") } s3://lime-kaldi-output/releasedToAAPB/#{ tf }`
+
+          puts "Finished with #{tf}......"
+        else
+          
+          puts "Yuck! Didnt think Id see this! #{tf}"
+          goodTranscript = false
+        end
+      rescue JSON::ParserError => e
+
+        puts "Found invalid json for #{tf} #{e.inspect}, skipping..."
+        goodTranscript = false
+      end
+
     else
-      puts "Yuck! Didnt think Id see this!"
+      puts "Whoa! #{tf} was already found in bucket!"
     end
-  else
-    puts "Whoa! #{tf} was already found in bucket!"
+
+    puts "Reporting... #{tf}"
+    csv << [tf_guid, existingTranscriptFound, goodTranscript]
+    goodTranscript = true
   end
 end
-

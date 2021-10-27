@@ -25,7 +25,7 @@ filename_no_ext=$(echo "$base" | cut -f 1 -d '.' )
 echo $base
 outputwavpath=/root/audio_in_16khz/"$filename_no_ext"_16kHz.wav
 echo $outputwavpath
-outputjsonpath="/root/$filename_no_ext".json
+outputjsonpath="/root/$filename_no_ext"-transcript.json
 echo $outputjsonpath
 
 # use ffmpeg to get 16khz fiel
@@ -39,16 +39,14 @@ echo "I reach for audio files..."
 # create phrase level json with jq
 word_json=$(jq ' [{} + .words[]|{"start_time": ( (((.time|tostring) + ".")|split(".")[0] + ".") + ( ((.time|tostring) + ".")|split(".")[1]   + "00" | .[0:2]) )         , "end_time": ( (((((.time|tonumber) + (.duration|tonumber))|tostring) + ".")|split(".")[0] + ".") + ( ((((.time|tonumber) + (.duration|tonumber))|tostring) + ".")|split(".")[1]   + "00" | .[0:2]) ) , "word_group" : ( (((.time|tonumber) + (.duration|tonumber))/ 5 + 1)|tostring|split(".")[0]|tonumber ) , "word" : .word }]' "$outputjsonpath" );
 
-# write the json file to 'outputjsonpath'-transcript.json
-finished_output_path="$outputjsonpath-transcript.json"
-echo "$word_json" | jq --arg file_id "$(basename "$outputjsonpath" | sed -e 's#\..*$##g' | tr -d \")" --arg startoff "$(echo $word_json | jq -r ' .[0].start_time')" --argjson wgns "$(echo $word_json | jq -jc ' [.[].word_group]|unique')" '[ $wgns[] as $groupnum  |    [ .[] |   select(.word_group==$groupnum ) ]   |   {start_time:.[0].start_time,end_time:.[-1].end_time , text:[.[].word]|join(" "), speaker_id: ( ((((.[-1].end_time|tonumber) - ($startoff|tonumber)))/ 50 + 1)|tostring|split(".")[0]|tonumber )}   ] | {"id":$file_id,"language":"en-US","parts": . }' > $finished_output_path ;
+echo "$word_json" | jq --arg file_id "$(basename "$outputjsonpath" | sed -e 's#\..*$##g' | tr -d \")" --arg startoff "$(echo $word_json | jq -r ' .[0].start_time')" --argjson wgns "$(echo $word_json | jq -jc ' [.[].word_group]|unique')" '[ $wgns[] as $groupnum  |    [ .[] |   select(.word_group==$groupnum ) ]   |   {start_time:.[0].start_time,end_time:.[-1].end_time , text:[.[].word]|join(" "), speaker_id: ( ((((.[-1].end_time|tonumber) - ($startoff|tonumber)))/ 50 + 1)|tostring|split(".")[0]|tonumber )}   ] | {"id":$file_id,"language":"en-US","parts": . }' > $outputjsonpath ;
 
 # echo "Converting json to txt"
 # ./json2txt.py
 
 # upload file to object store
-echo "Uploading $finished_output_path to object S3..."
-aws s3api put-object --bucket $LIMEKALDI_OUTPUT_BUCKET --key "transcripts/$(basename -- "$finished_output_path")" --body $finished_output_path
+echo "Uploading $outputjsonpath to object S3..."
+aws s3api put-object --bucket $LIMEKALDI_OUTPUT_BUCKET --key "transcripts/$(basename -- "$outputjsonpath")" --body $outputjsonpath
 
 echo "Great Job! $LIMEKALDI_INPUT_KEY" > ./donefile
 aws s3api put-object --bucket $LIMEKALDI_OUTPUT_BUCKET --key lime-kaldi-successes/$LIMEKALDI_UID.txt --body ./donefile

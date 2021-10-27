@@ -161,6 +161,7 @@ spec:
   containers:
     - name: lime-kaldi-worker
       image: mla-dockerhub.wgbh.org/lime-kaldi-download:latest
+      imagePullPolicy: Always
       resources:
         limits:
           memory: "9000Mi"

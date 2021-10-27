@@ -56,7 +56,14 @@ doc = Nokogiri::XML(xml)
 doc.remove_namespaces!
 ci_node = doc.xpath( %(/*/pbcoreIdentifier[@source="Sony Ci"]) ).first
 ci_id = ci_node.text if ci_node
-puts "CI ID found #{ci_id}"
+
+if ci_id
+  puts "CI ID found #{ci_id}"
+else
+  puts "No CI ID found for #{guid} - record was not available on AAPB..."
+  fail_job(job_uid, guid)
+  return
+end
 
 # make OUTPUTFILENAME
 # form default output key if not specifieid

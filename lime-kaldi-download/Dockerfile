@@ -11,4 +11,4 @@ RUN bundle install
 RUN chmod +x /root/app/download.rb
 
 # uses the ENV vars from job to know guid!
-CMD bundle exec /root/app/download.rb
+CMD bundle exec ruby /root/app/download.rb

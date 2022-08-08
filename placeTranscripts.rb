@@ -12,9 +12,16 @@ def fileExists(bucket, file)
 end
 
 
-folderContents=`ls -l1`.split("\n")
-folderContents.delete("placeTranscripts.rb")
-transcriptFiles=folderContents
+# folderContents=`ls -l1`.split("\n")
+# folderContents.delete("placeTranscripts.rb")
+# transcriptFiles=folderContents
+
+
+
+# great.
+transcriptFiles = `aws s3api`
+
+
 
 CSV.open("place-report-#{ Time.now.strftime("%m-%d-%Y-%H:%M") }.csv", "wb") do |csv|
 
@@ -59,7 +66,7 @@ CSV.open("place-report-#{ Time.now.strftime("%m-%d-%Y-%H:%M") }.csv", "wb") do |
       end
 
     else
-      puts "Whoa! #{tf} was already found in bucket!"
+      puts "Whoa! #{tf} was already found in bucket! Skipping..."
     end
 
     puts "Reporting... #{tf}"

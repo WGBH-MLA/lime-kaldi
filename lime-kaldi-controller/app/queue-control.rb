@@ -6,7 +6,7 @@ require 'json'
 require 'pathname'
 
 
-NUMBER_OF_QUEUES = 2
+NUMBER_OF_QUEUES = 1
 
 module JobStatus
   New = 0
@@ -20,6 +20,13 @@ module JobType
   CreateTranscript = 0
   DownloadFromCi = 1
   # can add more job types here for different settings/etc
+end
+
+# exit if another copy of this script already running (took too long)
+num_running = `ps aux| grep "queue-control.rb >> /var/log/queue-control.log 2>&1" | grep -v "/bin/sh" | grep -v grep | grep -v $$ | wc -l`
+unless num_running.to_i == 1
+  puts "Exiting, previous cron run still in progress... #{num_running}\n\n"
+  return
 end
 
 # load db..
@@ -160,8 +167,7 @@ spec:
         secretName: ci-config        
   containers:
     - name: lime-kaldi-worker
-      image: mla-dockerhub.wgbh.org/lime-kaldi-download:latest
-      imagePullPolicy: Always
+      image: foggbh/lime-kaldi-download:latest
       resources:
         limits:
           memory: "9000Mi"

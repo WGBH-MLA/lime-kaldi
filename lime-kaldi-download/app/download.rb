@@ -1,9 +1,6 @@
-#!/usr/local/bin/ruby
-
 require 'nokogiri'
 require 'sony_ci_api'
 require 'open-uri'
-
 
 # s3 upload to OUTPUTBUCKET/OUTPUTFILENAME
 def fail_job(job_uid, guid)
@@ -57,7 +54,7 @@ doc.remove_namespaces!
 ci_node = doc.xpath( %(/*/pbcoreIdentifier[@source="Sony Ci"]) ).first
 ci_id = ci_node.text if ci_node
 
-if ci_id
+if ci_id.present?
   puts "CI ID found #{ci_id}"
 else
   puts "No CI ID found for #{guid} - record was not available on AAPB..."
@@ -87,10 +84,16 @@ end
 
 # mounted secret on rancher
 @client = SonyCiApi::Client.new( "/root/ci-config/ci-config.yml" )
-File.open(local_path, "wb") do |f|
-  url = @client.asset_download(ci_id)["location"]
-  f.write( URI.open( url ) {|f| f.read } )
+begin
+  File.open(local_path, "wb") do |f|
+    url = @client.asset_download(ci_id)["location"]
+    f.write( URI.open( url ) {|f| f.read } )
+  end
+rescue SonyCiApi::NotFoundError => e
+  puts "Oof! Ci id #{ci_id} was not found on sony ci!! Failing job. #{e.inspect}"
+  fail_job(job_uid, guid)
 end
+
 
 # upload file duh
 `aws s3api put-object --bucket #{ output_bucket } --key #{output_key} --body #{ local_path }`

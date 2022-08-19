@@ -2,13 +2,12 @@
 
 # not to scale
 # docker run --memory=10G --memory-swap=12G lime-kaldi
-
 function done_file_exists {
   aws s3api head-object --bucket $LIMEKALDI_OUTPUT_BUCKET --key lime-kaldi-successes/$LIMEKALDI_UID.txt &> /dev/null
 }
 
 
-function error_file_exists {
+function failure_file_exists {
   aws s3api head-object --bucket $LIMEKALDI_OUTPUT_BUCKET --key lime-kaldi-failures/$LIMEKALDI_UID.txt &> /dev/null
 }
 

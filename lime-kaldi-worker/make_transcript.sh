@@ -33,11 +33,12 @@ fi
 
 # check for existing generated TS!!!!
 if output_file_exists;
+  then
   echo "I found an existing transcript for this file, exiting..."
   echo "Oops I did something bad! $LIMEKALDI_INPUT_KEY" > ./donefile
   aws s3api put-object --bucket lime-kaldi-output --key lime-kaldi-failures/$LIMEKALDI_UID.txt --body ./donefile
   exit 0
-end
+fi
 
 # write the video file to /root
 local_input_filepath=/root/$(basename -- "$LIMEKALDI_INPUT_KEY")

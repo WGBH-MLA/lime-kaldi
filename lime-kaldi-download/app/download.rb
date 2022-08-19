@@ -5,9 +5,9 @@ require 'open-uri'
 # s3 upload to OUTPUTBUCKET/OUTPUTFILENAME
 def fail_job(job_uid, guid)
   puts "Oh no! Failing job..."
-  `echo "Oops I did something bad! #{guid}" > ./donefile`
+  `echo "Oops I did something bad on this dOWNLOAD!! #{guid}" > ./donefile`
   # until runner starts looking for failures
-  `aws s3api put-object --bucket lime-kaldi-output --key lime-kaldi-successes/#{job_uid}.txt --body ./donefile`
+  `aws s3api put-object --bucket lime-kaldi-output --key lime-kaldi-failures/#{job_uid}.txt --body ./donefile`
 end
 
 def succeed_job(job_uid, guid)

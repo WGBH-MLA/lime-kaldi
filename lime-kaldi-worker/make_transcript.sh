@@ -7,12 +7,38 @@ function done_file_exists {
   aws s3api head-object --bucket $LIMEKALDI_OUTPUT_BUCKET --key lime-kaldi-successes/$LIMEKALDI_UID.txt &> /dev/null
 }
 
+
+function error_file_exists {
+  aws s3api head-object --bucket $LIMEKALDI_OUTPUT_BUCKET --key lime-kaldi-failures/$LIMEKALDI_UID.txt &> /dev/null
+}
+
+function output_file_exists {
+  check_base=$(basename -- "$LIMEKALDI_INPUT_KEY")
+  check_filename_no_ext=$(echo "$check_base" | cut -f 1 -d '.' )
+  aws s3api head-object --bucket americanarchive.org --key "transcripts/$check_filename_no_ext-transcript.json" &> /dev/null
+}
+
+
 # Check if this job is actually already done (we just rebooted)
 if done_file_exists;
   then
     echo "Done file already exists, I've no purpose in this world... Goodbye!"
     exit 0
 fi
+
+if failure_file_exists;
+  then
+    echo "Failure file exists, I've failed in a past life aaah!"
+    exit 0
+fi
+
+# check for existing generated TS!!!!
+if output_file_exists;
+  echo "I found an existing transcript for this file, exiting..."
+  echo "Oops I did something bad! $LIMEKALDI_INPUT_KEY" > ./donefile
+  aws s3api put-object --bucket lime-kaldi-output --key lime-kaldi-failures/$LIMEKALDI_UID.txt --body ./donefile
+  exit 0
+end
 
 # write the video file to /root
 local_input_filepath=/root/$(basename -- "$LIMEKALDI_INPUT_KEY")

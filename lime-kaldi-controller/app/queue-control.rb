@@ -30,7 +30,7 @@ unless num_running.to_i == 1
 end
 
 # load db..
-@client = Mysql2::Client.new(host: "lime-kaldi-mysql", username: "root", database: "limekaldi", password: "", port: 3306)
+@client = Mysql2::Client.new(host: "172.40.13.19", username: "root", database: "limekaldi", password: "", port: 3306)
 
 # def get_errortxt_filepath(uid)
 #   # this is a folder of error files, marking the failure of a job, and containing the full stdout/err from the job itself
@@ -40,6 +40,11 @@ end
 def get_donefile_filepath(uid)
   # this is a folder of empty files, marking the success of an audiosplit job
   %(lime-kaldi-successes/#{uid}.txt)
+end
+
+def get_failfile_filepath(uid)
+  # this is a folder of empty files, marking the success of an audiosplit job
+  %(lime-kaldi-failures/#{uid}.txt)
 end
 
 def get_pod_name(queue_number, uid)
@@ -238,17 +243,31 @@ end
 # job.each...
 jobs = @client.query("SELECT * FROM jobs WHERE status=#{ JobStatus::Working }")
 puts "Found #{jobs.count} jobs with JS::Working"
+
 jobs.each do |job|
+  job_failed = false
   puts "Found JS::Working job #{job.inspect}, checking pod #{job["uid"]}"
 
   donefilepath = get_donefile_filepath(job["uid"])
+  failfilepath = get_failfile_filepath(job["uid"])
   
   if job["job_type"] == JobType::CreateTranscript
-    puts "CreateTranscript CHECK:: Now searching for Done file #{donefilepath}"
-    resp = `aws s3api head-object --bucket lime-kaldi-output --key #{donefilepath}`
+
+    puts "CreateTranscript CHECK:: Now searching for Fail file #{failfilepath}"
+    resp = `aws s3api head-object --bucket lime-kaldi-output --key #{failfilepath}`
     # if done file is present, work completed successfully
     job_finished = !resp.empty?
-    puts "Done File #{job["uid"]} was found on object store" if job_finished
+    puts "Fail! File #{job["uid"]} was found on object store" if job_finished
+    job_failed = true
+
+    if !job_finished
+      puts "CreateTranscript CHECK:: Now searching for Done file #{donefilepath}"
+      resp = `aws s3api head-object --bucket lime-kaldi-output --key #{donefilepath}`
+      # if done file is present, work completed successfully
+      job_finished = !resp.empty?
+      puts "Done File #{job["uid"]} was found on object store" if job_finished
+    end
+
   elsif job["job_type"] == JobType::DownloadFromCi
 
     puts "DownloadFromCi CHECK:: Now searching for Done file #{donefilepath}"
@@ -267,7 +286,18 @@ jobs.each do |job|
     # head-object returns "" in this context when 404, otherwise gives a zesty pan-fried json message as a String
     puts "Job Succeeded - Attempting to delete pod #{pod_name}"
     puts `kubectl --kubeconfig=/mnt/kubectl-secret --namespace=lime-kaldi delete pod #{pod_name}`  
-    set_job_status(job["uid"], JobStatus::Done)
+
+    if job_failed
+
+      # can use the fail file contents to set the error msg later
+      if job["job_type"] == JobType::CreateTranscript
+        set_job_status(job["uid"], JobStatus::Fail, "Existing TS file was found in AAPB bucket")
+      elsif job["job_type"] == JobType::DownloadFromCi
+        set_job_status(job["uid"], JobStatus::Fail, "Could not download from CI sowwy")
+      end
+    else
+      set_job_status(job["uid"], JobStatus::Done)
+    end
   else
 
     # TODO: add this back into worker

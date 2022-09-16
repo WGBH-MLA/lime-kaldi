@@ -4,3 +4,6 @@ lime-kaldi-worker/american-archive-kaldi.zip
 lime-kaldi-worker/credentials
 lime-kaldi-controller/controller-notes
 test-guy.mp4
+*.txt
+*.csv
+transcriptsWorkFolder/*

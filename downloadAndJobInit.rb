@@ -12,117 +12,129 @@ module JobType
   # can add more job types here for different settings/etc
 end
 
+require 'json'
 require 'mysql2'
 require 'securerandom'
-@client = Mysql2::Client.new(host: "lime-kaldi-mysql", username: "root", database: "limekaldi", password: "", port: 3306)
+require 'nokogiri'
 
+
+@client = Mysql2::Client.new(host: "lime-kaldi-mysql", username: "root", database: "limekaldi", password: "", port: 3306)
 queue_number = 0
 
-# File.read("/root/app/dec22-combined.txt").split("\n").each do |guid|
-#   uid = SecureRandom.uuid
-#   puts "Adding DownloadFromCi Job for #{guid}..."
-#   query = %(INSERT INTO jobs (uid, status, input_filepath, input_bucketname, job_type, queue_number) VALUES("#{uid}", #{JobStatus::New}, "#{ guid.gsub("\n", "") }", "lime-kaldi-input", #{ JobType::DownloadFromCi }, #{queue_number}))
-#   puts "Adding job... #{query}"
-#   resp = @client.query(query)
-#   puts "Responded with: #{resp}"
+#meffids
 
-#   # toggle to evenly distrubte between queues
-#   queue_number = queue_number == 0 ? 1 : 0
-# end
-
-
-File.open("LISTRESULT-#{Time.now.strftime("%D-%T")}") do |f|
-
-
-  File.read(ARGV[0]).split("\n").each do |guid|
-    if noExistingRealReleasedTranscript(guid)
-      if !checkifAlreadyDownloaded(guid)
-        puts "#{guid} wasnt downloaded, adding download job!"
-        addDownloadJob(guid)
-      end
-
-
-
-
-
-
-    # yes!
-    
-  end
-end
-
-
-def addDownloadJob(guid)
-  query = %(INSERT INTO jobs (uid, status, input_filepath, input_bucketname, job_type, queue_number) VALUES("#{uid}", #{JobStatus::New}, "#{guid.gsub("\n", "")}.#{ext}", "lime-kaldi-input", #{ JobType::DownloadFromCi }, #{queue_number}))
+def addDownloadJob(guid, queue_number)
+  uid = SecureRandom.uuid
+  query = %(INSERT INTO jobs (uid, status, input_filepath, input_bucketname, job_type, queue_number) VALUES("#{uid}", #{JobStatus::New}, "#{guid}", "lime-kaldi-input", #{ JobType::DownloadFromCi }, #{queue_number}))
   puts query
   resp = @client.query(query)
 end
 
-def addTranscriptJob(guid)
+def addTranscriptJob(guid, queue_number)
   uid = SecureRandom.uuid
   puts "Adding CreateTranscript Job for #{guid}..."
-  resp = `aws s3api head-object --bucket lime-kaldi-input --key #{guid}.mp3`
-  ext = resp.empty? ? "mp4" : "mp3"
-  query = %(INSERT INTO jobs (uid, status, input_filepath, input_bucketname, job_type, queue_number) VALUES("#{uid}", #{JobStatus::New}, "#{guid.gsub("\n", "")}.#{ext}", "lime-kaldi-input", #{ JobType::CreateTranscript }, #{queue_number}))
+  ext = extByAAPBMediaType(guid)
+  query = %(INSERT INTO jobs (uid, status, input_filepath, input_bucketname, job_type, queue_number) VALUES("#{uid}", #{JobStatus::New}, "#{guid}.#{ext}", "lime-kaldi-input", #{ JobType::CreateTranscript }, #{queue_number}))
   puts query
   resp = @client.query(query)
   puts resp
 
   # toggle to evenly distrubte between queues
-  queue_number = queue_number == 0 ? 1 : 0
+  # queue_number = queue_number == 0 ? 1 : 0
+  # leave as 0 for now ^
 end
 
-
-def checkifAlreadyDownloaded(guid)
-  foundIt = false
-  resp = `aws s3api head-object --bucket lime-kaldi-input --key "#{guid}.mp3"`
-  if resp.empty?
-    puts "no mp3 #{guid}"
+# is it in the limekaldi input folder
+def alreadyDownloaded(guid)
+  if fileExists("lime-kaldi-input", "#{guid}.mp3")
+    return true
   else
-    puts "mp3 found #{guid}"
-    foundIt = true
-  end
-  resp = `aws s3api head-object --bucket lime-kaldi-input --key "#{guid}.mp4"`
-  if resp.empty?
-    puts "no mp4 #{guid}"
-  else
-    puts "Found mp4 #{guid}"
-    foundIt = true
+    if fileExists("lime-kaldi-input", "#{guid}.mp4")
+      return true
+    end
   end
 
-  foundIt
+  return false
 end
 
-
+# is there any nonzero file in AAPB bucket for this guid
 def hasExistingAAPBTranscriptFile(guid)
-  xml = `curl -s https://americanarchive.org/catalog/#{guid}.pbcore`
+  idStyles(guid).each do |gstyle|
+    # puts "STYLE Checking #{gstyle}..."
+
+    fInfo = fileInfo( "americanarchive.org", "transcripts/#{guid}/#{guid}-transcript.json" )
+    if fInfo && fInfo["Content-Length"] && fInfo["Content-Length"] > 0
+      return true
+    end
+  end
+
+  # puts "STYLE Didn't find a TS file for #{guid}."
+  return false
+end
+
+def fileInfo(bucket, key)
+  resp = `aws s3api head-object --bucket #{bucket} --key #{key}`
+  return false if resp.empty?
+  JSON.parse(resp)
+end
+
+def fileExists(bucket, file)
+  s3_output = fileInfo(bucket, file)
+  # ruby return value is "" for an s3 404
+  s3_output && s3_output != ""
+end
+
+def idStyles(guid)
+  guidstem = guid.gsub(/cpb-aacip./, '')
+  # none in bucket  'cpb-aacip/'
+  ['cpb-aacip-', 'cpb-aacip_'].map { |style| style + guidstem }
+end
+
+def normalizeGuid(guid)
+  guid.gsub(/cpb-aacip./, 'cpb-aacip-')
+end
+
+def extByAAPBMediaType(guid)
+  xml = `curl https://americanarchive.org/catalog/#{guid}.pbcore`
   doc = Nokogiri::XML(xml)
   doc.remove_namespaces!
-  ts_node = doc.xpath( %(/*/pbcoreAnnotation[@annotationType="Transcript URL"]) ).first
-  ts_value = ts_node.text if ts_node
+  doc.xpath("/*/pbcoreInstantiation/instantiationMediaType").first == "Moving Image" ? "mp4" : "mp3"
+end
 
-  if ts_value
-    # ts value is the s3 URL
-    if checkForTSFile(ts_value)
-      puts "Found t file at #{ts_value}..."
-      return true
-    else
-      puts "Found Transcript URL annotation containing #{ts_value} but annotated file wasnt there!"
-      return false
-    end
+File.open("LISTRESULT-#{Time.now.to_i}", "w+") do |f|
+  f << %(guid,existingTranscriptFound,inputFileAlreadyDownloaded,addedTranscriptJob\n)
+  puts "Lets gooo!!!"
 
-  else
-    puts "No Transcript URL annotation for #{guid}, trying conventional locations for existing TS file..."
+  File.read(ARGV[0]).split("\n").each do |guid|
+    existingTranscriptFound = false
+    inputFileAlreadyDownloaded = false
+    addedTranscriptJob = false
 
-    idStyles(guid).each do |gstyle|
-      puts "STYLE Checking #{gstyle}..."
-      if checkForTSFile( s3URL(gstyle) )
-        puts "Found TS File without annotation #{gstyle}... skipping"
-        return true
+    guid = guid.gsub("\n", "")
+
+    puts "Starting #{guid}..."
+
+    existingTranscriptFound = hasExistingAAPBTranscriptFile(guid)
+    if !existingTranscriptFound
+      # there is nothing at loc in AAPB Bucket
+
+      puts "No existing TS found for #{guid}"
+
+      inputFileAlreadyDownloaded = alreadyDownloaded(guid)
+      if !inputFileAlreadyDownloaded
+        puts "#{guid} wasnt downloaded yet, adding download job!"
+        addDownloadJob( normalizeGuid(guid), 0 )
       end
+      
+      puts "#{guid} wasnt transcripted yet, adding transcript job!"
+      addTranscriptJob( normalizeGuid(guid), 1 )
+      addedTranscriptJob = true
+    else
+      # some nonzero file was found at loc in AAPB Bucket
+      puts "Found some sort of nonzero transcript file for #{guid}, skipping..."
     end
 
-    puts "STYLE Didn't find a TS file for #{guid} - swag."
-    return false
+    # yes!
+    f << %(#{guid},#{existingTranscriptFound},#{inputFileAlreadyDownloaded},#{addedTranscriptJob}\n)
   end
 end

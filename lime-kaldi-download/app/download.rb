@@ -94,7 +94,6 @@ rescue SonyCiApi::NotFoundError => e
   fail_job(job_uid, guid)
 end
 
-
 # upload file duh
 `aws s3api put-object --bucket #{ output_bucket } --key #{output_key} --body #{ local_path }`
 

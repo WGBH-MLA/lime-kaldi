@@ -30,7 +30,7 @@ unless num_running.to_i == 1
 end
 
 # load db..
-@client = Mysql2::Client.new(host: "172.40.13.19", username: "root", database: "limekaldi", password: "", port: 3306)
+@client = Mysql2::Client.new(host: "lime-kaldi-mysql", username: "root", database: "limekaldi", password: "", port: 3306)
 
 # def get_errortxt_filepath(uid)
 #   # this is a folder of error files, marking the failure of a job, and containing the full stdout/err from the job itself
@@ -257,10 +257,12 @@ jobs.each do |job|
     resp = `aws s3api head-object --bucket lime-kaldi-output --key #{failfilepath}`
     # if done file is present, work completed successfully
     job_finished = !resp.empty?
-    puts "Fail! File #{job["uid"]} was found on object store" if job_finished
-    job_failed = true
-
-    if !job_finished
+    
+    if job_finished
+      puts "Fail! File #{job["uid"]} was found on object store" if job_finished
+      job_failed = true
+  
+    else
       puts "CreateTranscript CHECK:: Now searching for Done file #{donefilepath}"
       resp = `aws s3api head-object --bucket lime-kaldi-output --key #{donefilepath}`
       # if done file is present, work completed successfully
@@ -270,11 +272,22 @@ jobs.each do |job|
 
   elsif job["job_type"] == JobType::DownloadFromCi
 
-    puts "DownloadFromCi CHECK:: Now searching for Done file #{donefilepath}"
-    resp = `aws s3api head-object --bucket lime-kaldi-output --key #{donefilepath}`
+    puts "CreateTranscript CHECK:: Now searching for Fail file #{failfilepath}"
+    resp = `aws s3api head-object --bucket lime-kaldi-output --key #{failfilepath}`
     # if done file is present, work completed successfully
     job_finished = !resp.empty?
-    puts "Done File #{job["uid"]} was found on object store" if job_finished
+    
+    if job_finished
+      puts "Fail! File #{job["uid"]} was found on object store" if job_finished
+      job_failed = true
+
+    else
+      puts "DownloadFromCi CHECK:: Now searching for Done file #{donefilepath}"
+      resp = `aws s3api head-object --bucket lime-kaldi-output --key #{donefilepath}`
+      # if done file is present, work completed successfully
+      job_finished = !resp.empty?
+      puts "Done File #{job["uid"]} was found on object store" if job_finished
+    end
   end
 
   puts "Got OBSTORE response #{resp} for #{job["uid"]} in Queue #{job["queue_number"]}"

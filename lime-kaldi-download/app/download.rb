@@ -3,9 +3,9 @@ require 'sony_ci_api'
 require 'open-uri'
 
 # s3 upload to OUTPUTBUCKET/OUTPUTFILENAME
-def fail_job(job_uid, guid)
+def fail_job(job_uid, guid, error_text)
   puts "Oh no! Failing job..."
-  `echo "Oops I did something bad on this dOWNLOAD!! #{guid}" > ./donefile`
+  `echo "Oops I did something bad on this dOWNLOAD!! #{guid} #{error_text}" > ./donefile`
   # until runner starts looking for failures
   `aws s3api put-object --bucket lime-kaldi-output --key lime-kaldi-failures/#{job_uid}.txt --body ./donefile`
 end
@@ -38,7 +38,7 @@ end
 
 unless guid && !guid.empty? && output_bucket && !output_bucket.empty?
   puts "missing params, failing job..."
-  fail_job(job_uid)
+  fail_job(job_uid, guid, "Missing input variable: guid - #{guid}, output_bucket - #{output_bucket}")
   return
 end
 
@@ -58,7 +58,7 @@ if ci_id.present?
   puts "CI ID found #{ci_id}"
 else
   puts "No CI ID found for #{guid} - record was not available on AAPB..."
-  fail_job(job_uid, guid)
+  fail_job(job_uid, guid, "No CI ID was found for record #{guid}...")
   return
 end
 
@@ -78,10 +78,11 @@ local_path = %(/root/#{File.basename(output_key)})
 resp = `aws s3api head-object --bucket #{output_bucket} --key #{output_key}`
 unless resp.empty?
   puts "destination file already exists, failing job..."
-  fail_job(job_uid, guid) 
+  fail_job(job_uid, guid, "#{guid} Input file already found in bucket!!")
   return
 end
 
+failed = nil
 # mounted secret on rancher
 @client = SonyCiApi::Client.new( "/root/ci-config/ci-config.yml" )
 begin
@@ -89,9 +90,14 @@ begin
     url = @client.asset_download(ci_id)["location"]
     f.write( URI.open( url ) {|f| f.read } )
   end
-rescue SonyCiApi::NotFoundError => e
-  puts "Oof! Ci id #{ci_id} was not found on sony ci!! Failing job. #{e.inspect}"
-  fail_job(job_uid, guid)
+rescue Exception => e
+  puts "Oof! errored on {ci_id} on download!! Failing job. #{e.inspect}"
+  fail_job(job_uid, guid, e.inspect)
+  failed = true
+end
+
+if failed
+  return
 end
 
 # upload file duh

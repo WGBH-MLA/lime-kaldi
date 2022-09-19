@@ -5,7 +5,6 @@ require 'securerandom'
 require 'json'
 require 'pathname'
 
-
 NUMBER_OF_QUEUES = 1
 
 module JobStatus
@@ -59,6 +58,14 @@ def set_job_status(uid, new_status, fail_reason=nil)
   else
     @client.query(%(UPDATE jobs SET status=#{new_status} WHERE uid="#{uid}"))
   end
+end
+
+def set_job_start_time(uid)
+  @client.query(%(UPDATE jobs SET job_start_time="#{Time.now.strftime('%Y-%m-%d %H:%M:%S')}" WHERE uid="#{uid}"))
+end
+
+def set_job_end_time(uid)
+  @client.query(%(UPDATE jobs SET job_end_time="#{Time.now.strftime('%Y-%m-%d %H:%M:%S')}" WHERE uid="#{uid}"))
 end
 
 def get_file_info(bucket, key)
@@ -212,6 +219,7 @@ spec:
   puts "I sure would like to start #{uid} for #{input_filename}!"
   puts `kubectl --kubeconfig /mnt/kubectl-secret --namespace=lime-kaldi apply -f /root/pod.yml`
   set_job_status(uid, JobStatus::Working)
+  set_job_start_time(uid)
 end
 
 
@@ -310,6 +318,7 @@ jobs.each do |job|
       end
     else
       set_job_status(job["uid"], JobStatus::Done)
+      set_job_end_time(job["uid"])
     end
   else
 
@@ -331,7 +340,7 @@ jobs.each do |job|
   end
 end
 
-# CREATE TABLE jobs (uid varchar(255), status int, input_filepath varchar(1024), fail_reason varchar(1024), created_at datetime DEFAULT CURRENT_TIMESTAMP, job_type int DEFAULT 0, input_bucketname varchar(1024), queue_number int DEFAULT 0);
+# CREATE TABLE jobs (uid varchar(255), status int, input_filepath varchar(1024), fail_reason varchar(1024), created_at datetime DEFAULT CURRENT_TIMESTAMP, job_type int DEFAULT 0, input_bucketname varchar(1024), queue_number int DEFAULT 0, job_start_time datetime, job_end_time datetime);
 
 # moving car
 # ALTER TABLE jobs ADD COLUMN job_type int DEFAULT 0
@@ -340,6 +349,9 @@ end
 # ALTER TABLE jobs ADD COLUMN input_bucketname varchar(1024);
 
 # ALTER TABLE jobs ADD COLUMN queue_number int DEFAULT 0;
+
+# ALTER TABLE jobs ADD COLUMN job_start_time datetime;
+# ALTER TABLE jobs ADD COLUMN job_end_time datetime;
 
 # CREATE TABLE next_queue_number (number int DEFAULT 0);
 
